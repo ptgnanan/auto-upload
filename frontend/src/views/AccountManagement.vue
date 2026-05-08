@@ -2,18 +2,19 @@
   <div class="account-management">
     <div class="page-header">
       <h1>账号管理</h1>
+      <p class="page-subtitle">管理所有平台账号</p>
     </div>
 
     <div class="account-container">
       <div class="account-toolbar">
         <div class="toolbar-left">
-          <el-tabs v-model="activeTab" class="account-tabs">
-            <el-tab-pane label="全部" name="all" />
-            <el-tab-pane label="快手" name="快手" />
-            <el-tab-pane label="抖音" name="抖音" />
-            <el-tab-pane label="视频号" name="视频号" />
-            <el-tab-pane label="小红书" name="小红书" />
-          </el-tabs>
+          <div class="platform-filters">
+            <div v-for="f in filterOptions" :key="f.value"
+              :class="['filter-chip', { active: activeTab === f.value }]"
+              @click="activeTab = f.value">
+              {{ f.label }}
+            </div>
+          </div>
           <el-input
             v-model="searchKeyword"
             placeholder="搜索名称或账号"
@@ -45,43 +46,33 @@
           </el-table-column>
           <el-table-column prop="platform" label="平台" width="120">
             <template #default="scope">
-              <el-tag
-                :type="getPlatformTagType(scope.row.platform)"
-                effect="plain"
-                size="small"
-                round
-              >
+              <span :class="['platform-tag', getPlatformClass(scope.row.platform)]">
                 {{ scope.row.platform }}
-              </el-tag>
+              </span>
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" width="120">
             <template #default="scope">
-              <el-tag
-                :type="getStatusTagType(scope.row.status)"
-                effect="plain"
-                size="small"
-                :class="{'clickable-status': isStatusClickable(scope.row.status)}"
-                @click="handleStatusClick(scope.row)"
-              >
+              <span :class="['status-tag', getStatusClass(scope.row.status), { clickable: isStatusClickable(scope.row.status) }]"
+                @click="handleStatusClick(scope.row)">
                 <el-icon :class="scope.row.status === '验证中' ? 'is-loading' : ''" v-if="scope.row.status === '验证中'">
                   <Loading />
                 </el-icon>
                 {{ scope.row.status }}
-              </el-tag>
+              </span>
             </template>
           </el-table-column>
           <el-table-column label="操作" min-width="260">
             <template #default="scope">
               <div class="action-cell">
-                <el-button size="small" text @click="handleEdit(scope.row)">编辑</el-button>
-                <el-button size="small" text type="primary" @click="handleDownloadCookie(scope.row)">
+                <button class="action-btn" @click="handleEdit(scope.row)">编辑</button>
+                <button class="action-btn primary" @click="handleDownloadCookie(scope.row)">
                   <el-icon><Download /></el-icon> Cookie
-                </el-button>
-                <el-button size="small" text type="info" @click="handleUploadCookie(scope.row)">
+                </button>
+                <button class="action-btn info" @click="handleUploadCookie(scope.row)">
                   <el-icon><Upload /></el-icon> Cookie
-                </el-button>
-                <el-button size="small" text type="danger" @click="handleDelete(scope.row)">删除</el-button>
+                </button>
+                <button class="action-btn danger" @click="handleDelete(scope.row)">删除</button>
               </div>
             </template>
           </el-table-column>
@@ -104,17 +95,16 @@
     >
       <el-form :model="accountForm" label-width="80px" :rules="rules" ref="accountFormRef">
         <el-form-item label="平台" prop="platform">
-          <el-select
-            v-model="accountForm.platform"
-            placeholder="请选择平台"
-            style="width: 100%"
-            :disabled="dialogType === 'edit' || sseConnecting"
-          >
-            <el-option label="快手" value="快手" />
-            <el-option label="抖音" value="抖音" />
-            <el-option label="视频号" value="视频号" />
-            <el-option label="小红书" value="小红书" />
-          </el-select>
+          <div class="platform-picker">
+            <div v-for="p in platformOptions" :key="p.value"
+              :class="['platform-card', { active: accountForm.platform === p.label, disabled: dialogType === 'edit' || sseConnecting }]"
+              @click="!(dialogType === 'edit' || sseConnecting) && (accountForm.platform = p.label)">
+              <div class="platform-icon" :style="{ background: p.bg }">
+                <span :style="{ color: p.color }">{{ p.icon }}</span>
+              </div>
+              <div class="platform-name">{{ p.label }}</div>
+            </div>
+          </div>
         </el-form-item>
         <el-form-item label="名称" prop="name">
           <el-input
@@ -175,6 +165,21 @@ const appStore = useAppStore()
 
 const activeTab = ref('all')
 const searchKeyword = ref('')
+
+const filterOptions = [
+  { label: '全部', value: 'all' },
+  { label: '抖音', value: '抖音' },
+  { label: '快手', value: '快手' },
+  { label: '视频号', value: '视频号' },
+  { label: '小红书', value: '小红书' }
+]
+
+const platformOptions = [
+  { label: '抖音', value: '3', icon: 'D', color: '#f43f5e', bg: 'rgba(244,63,94,0.15)' },
+  { label: '快手', value: '4', icon: 'K', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+  { label: '视频号', value: '2', icon: 'V', color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
+  { label: '小红书', value: '1', icon: 'X', color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' }
+]
 
 const fetchAccountsQuick = async () => {
   try {
@@ -237,6 +242,17 @@ onMounted(() => {
 const getPlatformTagType = (platform) => {
   const typeMap = { '快手': 'success', '抖音': 'danger', '视频号': 'warning', '小红书': 'info' }
   return typeMap[platform] || 'info'
+}
+
+const getPlatformClass = (platform) => {
+  const classMap = { '抖音': 'douyin', '快手': 'kuaishou', '视频号': 'channels', '小红书': 'xiaohongshu' }
+  return classMap[platform] || ''
+}
+
+const getStatusClass = (status) => {
+  if (status === '验证中') return 'pending'
+  if (status === '正常') return 'normal'
+  return 'error'
 }
 
 const isStatusClickable = (status) => status === '异常'
@@ -473,12 +489,19 @@ onBeforeUnmount(() => { closeSSEConnection() })
       margin: 0;
       letter-spacing: -0.5px;
     }
+
+    .page-subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: $text-muted;
+      font-weight: 400;
+    }
   }
 
   .account-container {
-    background-color: $bg-color-surface;
-    border: 1px solid $border-base;
-    border-radius: 12px;
+    background-color: $bg-elevated;
+    border: 1px solid $border;
+    border-radius: $radius-card;
     padding: 4px 24px 24px;
 
     .account-toolbar {
@@ -491,7 +514,7 @@ onBeforeUnmount(() => { closeSSEConnection() })
       .toolbar-left {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 16px;
         flex: 1;
       }
 
@@ -500,44 +523,252 @@ onBeforeUnmount(() => { closeSSEConnection() })
         gap: 10px;
         flex-shrink: 0;
       }
+    }
 
-      .account-tabs {
-        :deep(.el-tabs__header) {
-          margin-bottom: 0;
+    // Platform filter chips
+    .platform-filters {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+
+      .filter-chip {
+        padding: 6px 16px;
+        border-radius: $radius-base;
+        border: 1px solid $border;
+        background: transparent;
+        color: $text-secondary;
+        font-size: 13px;
+        cursor: pointer;
+        transition: $transition-base;
+        white-space: nowrap;
+        user-select: none;
+
+        &:hover {
+          border-color: $border-active;
+          color: $text-primary;
+        }
+
+        &.active {
+          background: $gradient-brand-subtle;
+          border-color: $border-active;
+          color: $text-primary;
+          font-weight: 500;
         }
       }
     }
 
+    // Table overrides
     .account-list {
       margin-bottom: 20px;
+
+      :deep(.el-table) {
+        --el-table-bg-color: transparent;
+        --el-table-tr-bg-color: transparent;
+        --el-table-header-bg-color: transparent;
+        --el-table-row-hover-bg-color: rgba(255, 255, 255, 0.03);
+        --el-table-border-color: #{$border};
+        --el-table-text-color: #{$text-primary};
+        --el-table-header-text-color: #{$text-secondary};
+
+        th.el-table__cell {
+          font-weight: 500;
+          font-size: 13px;
+          border-bottom-color: $border;
+        }
+
+        td.el-table__cell {
+          border-bottom-color: $border;
+        }
+      }
+
+      .account-name {
+        font-weight: 500;
+        color: $text-primary;
+      }
+
+      // Platform tags with gradient backgrounds
+      .platform-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.5;
+        white-space: nowrap;
+
+        &.douyin {
+          background: $platform-douyin-bg;
+          color: $platform-douyin;
+        }
+
+        &.kuaishou {
+          background: $platform-kuaishou-bg;
+          color: $platform-kuaishou;
+        }
+
+        &.channels {
+          background: $platform-channels-bg;
+          color: $platform-channels;
+        }
+
+        &.xiaohongshu {
+          background: $platform-xiaohongshu-bg;
+          color: $platform-xiaohongshu;
+        }
+      }
+
+      // Status tags
+      .status-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.5;
+        white-space: nowrap;
+
+        &.normal {
+          background: rgba(34, 197, 94, 0.15);
+          color: $success-color;
+        }
+
+        &.pending {
+          background: rgba(59, 130, 246, 0.15);
+          color: $info-color;
+        }
+
+        &.error {
+          background: rgba(239, 68, 68, 0.15);
+          color: $danger-color;
+        }
+
+        &.clickable {
+          cursor: pointer;
+          transition: $transition-base;
+
+          &:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+          }
+        }
+
+        .el-icon.is-loading {
+          animation: rotate 1s linear infinite;
+        }
+      }
+
+      // Action buttons
+      .action-cell {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .action-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 10px;
+          border: none;
+          border-radius: $radius-sm;
+          background: transparent;
+          color: $text-secondary;
+          font-size: 13px;
+          cursor: pointer;
+          transition: $transition-base;
+
+          &:hover {
+            color: $text-primary;
+            background: rgba(255, 255, 255, 0.06);
+          }
+
+          &.primary:hover {
+            color: $brand-end;
+            background: rgba(59, 130, 246, 0.1);
+          }
+
+          &.info:hover {
+            color: $text-secondary;
+            background: rgba(148, 163, 184, 0.1);
+          }
+
+          &.danger:hover {
+            color: $danger-color;
+            background: rgba(239, 68, 68, 0.1);
+          }
+        }
+      }
     }
 
     .empty-data {
       padding: 60px 0;
     }
+  }
 
-    .account-name {
-      font-weight: 500;
-      color: $text-primary;
-    }
+  // Dialog — Platform picker
+  .platform-picker {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
 
-    .action-cell {
+    .platform-card {
+      width: 100px;
+      height: 80px;
+      border-radius: $radius-card;
+      border: 1px solid $border;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 4px;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: $transition-base;
+      background: transparent;
+
+      &:hover {
+        border-color: $border-active;
+      }
+
+      &.active {
+        border-color: $border-active;
+        background: $gradient-brand-subtle;
+      }
+
+      &.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .platform-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+
+        span {
+          font-weight: 700;
+        }
+      }
+
+      .platform-name {
+        font-size: 12px;
+        color: $text-secondary;
+        font-weight: 500;
+      }
+
+      &.active .platform-name {
+        color: $text-primary;
+      }
     }
   }
 
-  .clickable-status {
-    cursor: pointer;
-    transition: all 0.2s;
-
-    &:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
-    }
-  }
-
+  // QR code area
   .qrcode-container {
     margin-top: 20px;
     display: flex;
@@ -557,9 +788,9 @@ onBeforeUnmount(() => { closeSSEConnection() })
       .qrcode-image {
         max-width: 200px;
         max-height: 200px;
-        border: 1px solid $border-base;
+        border: 1px solid $border;
         background-color: #000;
-        border-radius: 8px;
+        border-radius: $radius-sm;
       }
     }
 
