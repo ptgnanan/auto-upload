@@ -49,7 +49,11 @@
 
       <!-- Content -->
       <main class="content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <transition name="fade-slide" mode="out-in">
+            <component :is="Component" :key="$route.path" />
+          </transition>
+        </router-view>
       </main>
     </div>
   </div>
@@ -198,5 +202,18 @@ const pageTitle = computed(() => route.meta?.title || '')
   background: $bg-base;
   padding: 24px;
   overflow-y: auto;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>

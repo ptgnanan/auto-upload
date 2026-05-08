@@ -86,14 +86,3 @@ $z-header: 10;
 $z-sidebar: 20;
 $z-overlay: 1000;
 $z-dialog: 2000;
-
-// ========== Legacy compatibility aliases ==========
-// These map old variable names to new ones so existing pages don't break
-// during the transition. Remove after all pages are updated.
-$primary-color: $brand-start;
-$bg-color-page: $bg-base;
-$bg-color-overlay: $bg-elevated;
-$bg-color-surface: $bg-elevated;
-$border-base: $border;
-$text-regular: $text-secondary;
-$transition-normal: $transition-base;
