@@ -17,3 +17,4 @@ vendor/upstream/
 Thumbs.db
 .env
 *.env.local
+.superpowers/
