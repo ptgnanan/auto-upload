@@ -13,6 +13,8 @@ def init_database():
     DB_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.cursor()
+
+    # 原始表
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_info (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,6 +33,49 @@ def init_database():
         file_path TEXT
     )
     """)
+
+    # 阶段二：发布任务表
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS publish_tasks (
+        id TEXT PRIMARY KEY,
+        platform TEXT NOT NULL,
+        account_name TEXT NOT NULL,
+        video_path TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        tags TEXT DEFAULT '[]',
+        status TEXT DEFAULT 'pending',
+        retry_count INTEGER DEFAULT 0,
+        max_retries INTEGER DEFAULT 3,
+        error_message TEXT DEFAULT '',
+        publish_url TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        started_at TIMESTAMP,
+        finished_at TIMESTAMP
+    )
+    """)
+
+    # 阶段二：发布日志表
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS publish_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL,
+        level TEXT DEFAULT 'info',
+        message TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES publish_tasks(id)
+    )
+    """)
+
+    # 阶段二：系统设置表
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     conn.commit()
     conn.close()
     print(f"Database initialized at {DB_PATH}")

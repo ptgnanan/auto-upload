@@ -1005,105 +1005,97 @@ const batchPublish = async () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  
-  // Tab管理区域
+
   .tab-management {
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    background-color: $bg-color-surface;
+    border: 1px solid $border-base;
+    border-radius: 12px;
     margin-bottom: 20px;
-    padding: 15px 20px;
-    
+    padding: 16px 20px;
+
     .tab-header {
       display: flex;
       align-items: flex-start;
       gap: 15px;
-      
+
       .tab-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 8px;
         flex: 1;
         min-width: 0;
-        
+
         .tab-item {
-           display: flex;
-           align-items: center;
-           gap: 6px;
-           padding: 6px 12px;
-           background-color: #f5f7fa;
-           border: 1px solid #dcdfe6;
-           border-radius: 4px;
-           cursor: pointer;
-           transition: all 0.3s;
-           font-size: 14px;
-           height: 32px;
-           
-           &:hover {
-             background-color: #ecf5ff;
-             border-color: #b3d8ff;
-           }
-           
-           &.active {
-             background-color: #409eff;
-             border-color: #409eff;
-             color: #fff;
-             
-             .close-icon {
-               color: #fff;
-               
-               &:hover {
-                 background-color: rgba(255, 255, 255, 0.2);
-               }
-             }
-           }
-           
-           .close-icon {
-             padding: 2px;
-             border-radius: 2px;
-             cursor: pointer;
-             transition: background-color 0.3s;
-             font-size: 12px;
-             
-             &:hover {
-               background-color: rgba(0, 0, 0, 0.1);
-             }
-           }
-         }
-       }
-       
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          background-color: $bg-color-overlay;
+          border: 1px solid $border-base;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-size: 14px;
+          height: 34px;
+          color: $text-secondary;
+
+          &:hover {
+            border-color: rgba($primary-color, 0.4);
+            color: $text-primary;
+          }
+
+          &.active {
+            background-color: $primary-color;
+            border-color: $primary-color;
+            color: #fff;
+            font-weight: 600;
+
+            .close-icon {
+              color: #fff;
+              &:hover { background-color: rgba(255, 255, 255, 0.2); }
+            }
+          }
+
+          .close-icon {
+            padding: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 12px;
+            &:hover { background-color: rgba(255, 255, 255, 0.1); }
+          }
+        }
+      }
+
       .tab-actions {
         display: flex;
         gap: 10px;
         flex-shrink: 0;
-        
-        .add-tab-btn,
-        .batch-publish-btn {
+
+        .add-tab-btn, .batch-publish-btn {
           display: flex;
           align-items: center;
           gap: 4px;
-          height: 32px;
-          padding: 6px 12px;
+          height: 34px;
           font-size: 14px;
           white-space: nowrap;
         }
       }
     }
   }
-  
-  // 批量发布进度对话框样式
+
   .publish-progress {
     padding: 20px;
-    
+
     .current-publishing {
       margin: 15px 0;
       text-align: center;
-      color: #606266;
+      color: $text-secondary;
     }
 
     .publish-results {
       margin-top: 20px;
-      border-top: 1px solid #EBEEF5;
+      border-top: 1px solid $border-base;
       padding-top: 15px;
       max-height: 300px;
       overflow-y: auto;
@@ -1112,32 +1104,14 @@ const batchPublish = async () => {
         display: flex;
         align-items: center;
         padding: 8px 0;
-        color: #606266;
+        color: $text-secondary;
 
-        .el-icon {
-          margin-right: 8px;
-        }
-
-        .label {
-          margin-right: 10px;
-          font-weight: 500;
-        }
-
-        .message {
-          color: #909399;
-        }
-
-        &.success {
-          color: #67C23A;
-        }
-
-        &.error {
-          color: #F56C6C;
-        }
-
-        &.cancelled {
-          color: #909399;
-        }
+        .el-icon { margin-right: 8px; }
+        .label { margin-right: 10px; font-weight: 500; color: $text-primary; }
+        .message { color: $text-muted; }
+        &.success { color: $success-color; .label { color: $success-color; } }
+        &.error { color: $danger-color; .label { color: $danger-color; } }
+        &.cancelled { color: $text-muted; }
       }
     }
   }
@@ -1145,95 +1119,68 @@ const batchPublish = async () => {
   .dialog-footer {
     text-align: right;
   }
-  
-  // 内容区域
+
   .publish-content {
     flex: 1;
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    
+    background-color: $bg-color-surface;
+    border: 1px solid $border-base;
+    border-radius: 12px;
+    padding: 24px;
+
     .tab-content-wrapper {
       display: flex;
       justify-content: center;
-      
+
       .tab-content {
         width: 100%;
         max-width: 800px;
-        
+
         h3 {
-          font-size: 16px;
-          font-weight: 500;
+          font-size: 15px;
+          font-weight: 600;
           color: $text-primary;
-          margin: 0 0 10px 0;
+          margin: 0 0 12px 0;
+          letter-spacing: -0.2px;
         }
-        
-        .upload-section,
-        .account-section,
-        .platform-section,
-        .title-section,
-        .product-section,
-        .topic-section,
-        .schedule-section {
-          margin-bottom: 30px;
+
+        .upload-section, .account-section, .platform-section,
+        .title-section, .product-section, .topic-section, .schedule-section {
+          margin-bottom: 28px;
+          padding-bottom: 28px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
         }
 
         .product-section {
-          .product-name-input,
-          .product-link-input {
-            margin-bottom: 5px;
-          }
+          .product-name-input, .product-link-input { margin-bottom: 8px; }
         }
-        
+
         .video-upload {
           width: 100%;
-          
           :deep(.el-upload-dragger) {
             width: 100%;
             height: 180px;
           }
         }
-        
-        .account-input {
-          max-width: 400px;
-        }
-        
-        .platform-buttons {
+
+        .platform-radios {
           display: flex;
-          gap: 10px;
+          gap: 16px;
           flex-wrap: wrap;
-          
-          .platform-btn {
-            min-width: 80px;
-          }
         }
-        
-        .title-input {
-          max-width: 600px;
-        }
-        
+
         .topic-display {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          
+
           .selected-topics {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             min-height: 32px;
-            
-            .topic-tag {
-              font-size: 14px;
-            }
-          }
-          
-          .select-topic-btn {
-            align-self: flex-start;
           }
         }
-        
+
         .schedule-controls {
           display: flex;
           flex-direction: column;
@@ -1241,135 +1188,129 @@ const batchPublish = async () => {
 
           .schedule-settings {
             margin-top: 15px;
-            padding: 15px;
-            background-color: #f5f7fa;
-            border-radius: 4px;
+            padding: 16px;
+            background-color: $bg-color-overlay;
+            border: 1px solid $border-base;
+            border-radius: 8px;
 
             .schedule-item {
               display: flex;
               align-items: center;
-              margin-bottom: 15px;
-
-              &:last-child {
-                margin-bottom: 0;
-              }
-
-              .label {
-                min-width: 120px;
-                margin-right: 10px;
-              }
-
-              .el-time-select {
-                margin-right: 10px;
-              }
-
-              .el-button {
-                margin-left: 10px;
-              }
+              margin-bottom: 14px;
+              &:last-child { margin-bottom: 0; }
+              .label { min-width: 120px; margin-right: 10px; color: $text-secondary; font-size: 14px; }
+              .el-time-select { margin-right: 10px; }
+              .el-button { margin-left: 10px; }
             }
           }
         }
-        
+
         .action-buttons {
           display: flex;
           justify-content: flex-end;
           gap: 10px;
-          margin-top: 30px;
+          margin-top: 32px;
           padding-top: 20px;
-          border-top: 1px solid #ebeef5;
+          border-top: 1px solid $border-base;
         }
 
         .draft-section {
-          margin: 20px 0;
-
-          .draft-checkbox {
-            display: block;
-            margin: 10px 0;
-          }
+          margin: 16px 0;
+          .draft-checkbox { display: block; margin: 10px 0; }
         }
 
         .original-section {
           margin: 10px 0 20px;
+          .original-checkbox { display: block; margin: 10px 0; }
+        }
 
-          .original-checkbox {
-            display: block;
-            margin: 10px 0;
+        .account-display {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+
+          .selected-accounts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+        }
+
+        .upload-options-content {
+          display: flex;
+          gap: 16px;
+          justify-content: center;
+          padding: 20px 0;
+
+          .option-btn {
+            width: 140px;
+            height: 80px;
+            font-size: 16px;
           }
         }
       }
     }
   }
 
-  // 已上传文件列表样式
   .uploaded-files {
-    margin-top: 20px;
-    
+    margin-top: 16px;
+
     h4 {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 500;
-      margin-bottom: 12px;
-      color: #303133;
+      margin-bottom: 10px;
+      color: $text-primary;
     }
-    
+
     .file-list {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      
+      gap: 8px;
+
       .file-item {
         display: flex;
         align-items: center;
-        padding: 10px 15px;
-        background-color: #f5f7fa;
-        border-radius: 4px;
-        
-        .el-link {
-          margin-right: 10px;
-          max-width: 300px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        
-        .file-size {
-          color: #909399;
-          font-size: 13px;
-          margin-right: auto;
-        }
+        padding: 10px 16px;
+        background-color: $bg-color-overlay;
+        border: 1px solid $border-base;
+        border-radius: 8px;
+        transition: border-color 0.2s;
+
+        &:hover { border-color: rgba($primary-color, 0.3); }
+
+        .el-link { margin-right: 12px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-size { color: $text-muted; font-size: 13px; margin-right: auto; }
       }
     }
   }
-  
-  // 添加话题弹窗样式
+
   .topic-dialog {
     .topic-dialog-content {
       .custom-topic-input {
         display: flex;
         gap: 12px;
         margin-bottom: 24px;
-        
-        .custom-input {
-          flex: 1;
-        }
+        .custom-input { flex: 1; }
       }
-      
+
       .recommended-topics {
         h4 {
           margin: 0 0 16px 0;
-          font-size: 16px;
-          font-weight: 500;
-          color: #303133;
+          font-size: 15px;
+          font-weight: 600;
+          color: $text-primary;
         }
-        
+
         .topic-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-          gap: 12px;
-          
+          gap: 10px;
+
           .topic-btn {
             height: 36px;
             font-size: 14px;
-            border-radius: 6px;
+            border-radius: 8px;
             min-width: 100px;
             padding: 0 12px;
             white-space: nowrap;
@@ -1377,17 +1318,11 @@ const batchPublish = async () => {
             display: flex;
             align-items: center;
             justify-content: center;
-            
-            &.el-button--primary {
-              background-color: #409eff;
-              border-color: #409eff;
-              color: white;
-            }
           }
         }
       }
     }
-    
+
     .dialog-footer {
       display: flex;
       justify-content: flex-end;

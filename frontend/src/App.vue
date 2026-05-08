@@ -18,31 +18,31 @@
           >
             <el-menu-item index="/">
               <el-icon><HomeFilled /></el-icon>
-              <span>Dashboard</span>
+              <span>仪表盘</span>
             </el-menu-item>
             <el-menu-item index="/account-management">
               <el-icon><User /></el-icon>
-              <span>Account</span>
+              <span>账号管理</span>
             </el-menu-item>
             <el-menu-item index="/material-management">
               <el-icon><Picture /></el-icon>
-              <span>Material</span>
+              <span>素材管理</span>
             </el-menu-item>
             <el-menu-item index="/publish-center">
               <el-icon><Upload /></el-icon>
-              <span>Publish</span>
+              <span>发布中心</span>
             </el-menu-item>
             <el-menu-item index="/task-center">
               <el-icon><List /></el-icon>
-              <span>Tasks</span>
+              <span>任务中心</span>
             </el-menu-item>
             <el-menu-item index="/publish-history">
               <el-icon><Clock /></el-icon>
-              <span>History</span>
+              <span>发布历史</span>
             </el-menu-item>
             <el-menu-item index="/settings">
               <el-icon><Setting /></el-icon>
-              <span>Settings</span>
+              <span>系统设置</span>
             </el-menu-item>
           </el-menu>
         </div>
@@ -102,11 +102,12 @@ const toggleSidebar = () => {
 }
 
 .el-aside {
-  background-color: $bg-color-page;
+  background-color: #0a0f1e;
   color: $text-primary;
   height: 100vh;
   overflow: hidden;
   transition: width $transition-normal;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 
   .sidebar {
     display: flex;
@@ -114,12 +115,12 @@ const toggleSidebar = () => {
     height: 100%;
 
     .logo {
-      height: 60px;
-      padding: 0 16px;
+      height: 64px;
+      padding: 0 20px;
       display: flex;
       align-items: center;
-      background-color: $bg-color-overlay;
       overflow: hidden;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
       .logo-img {
         width: 32px;
@@ -130,32 +131,58 @@ const toggleSidebar = () => {
       h2 {
         color: $text-primary;
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 700;
         white-space: nowrap;
         margin: 0;
+        letter-spacing: -0.3px;
       }
     }
 
     .sidebar-menu {
       border-right: none;
       flex: 1;
+      padding: 8px;
 
       .el-menu-item {
         display: flex;
         align-items: center;
+        height: 44px;
+        line-height: 44px;
+        margin-bottom: 2px;
+        border-radius: 10px;
+        transition: all 0.2s;
 
         .el-icon {
-          margin-right: 10px;
+          margin-right: 12px;
           font-size: 18px;
+          transition: color 0.2s;
+        }
+
+        span {
+          font-size: 14px;
+          font-weight: 500;
         }
 
         &.is-active {
-          color: $primary-color;
-          background-color: rgba($primary-color, 0.1);
+          color: #fff;
+          background-color: rgba($primary-color, 0.15);
+
+          .el-icon {
+            color: $primary-color;
+          }
+
+          span {
+            color: #fff;
+            font-weight: 600;
+          }
         }
 
-        &:hover {
-          background-color: rgba($primary-color, 0.05);
+        &:hover:not(.is-active) {
+          background-color: rgba(255, 255, 255, 0.05);
+
+          .el-icon {
+            color: $text-primary;
+          }
         }
       }
     }
@@ -164,25 +191,29 @@ const toggleSidebar = () => {
 
 .el-header {
   background-color: $bg-color-overlay;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding: 0;
-  height: 60px;
+  height: 56px;
 
   .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
     height: 100%;
-    padding: 0 16px;
+    padding: 0 20px;
 
     .header-left {
       .toggle-sidebar {
         font-size: 20px;
         cursor: pointer;
         color: $text-secondary;
+        padding: 6px;
+        border-radius: 6px;
+        transition: all 0.2s;
 
         &:hover {
           color: $primary-color;
+          background-color: rgba($primary-color, 0.1);
         }
       }
     }
@@ -209,7 +240,7 @@ const toggleSidebar = () => {
 
 .el-main {
   background-color: $bg-color-page;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
 }
 </style>

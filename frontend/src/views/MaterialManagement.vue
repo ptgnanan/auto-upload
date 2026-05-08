@@ -396,98 +396,83 @@ onMounted(() => {
 @use '@/styles/variables.scss' as *;
 
 @keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .material-management {
-  
   .page-header {
-    margin-bottom: 20px;
-    
+    margin-bottom: 24px;
+
     h1 {
-      font-size: 24px;
-      font-weight: 500;
+      font-size: 26px;
+      font-weight: 700;
       color: $text-primary;
       margin: 0;
+      letter-spacing: -0.5px;
     }
   }
-  
+
   .material-list-container {
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    
+    background-color: $bg-color-surface;
+    border: 1px solid $border-base;
+    border-radius: 12px;
+    padding: 24px;
+
     .material-search {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
-      
+
       .el-input {
-        width: 300px;
+        width: 280px;
       }
-      
+
       .action-buttons {
         display: flex;
         gap: 10px;
-        
+
         .is-loading {
           animation: rotate 1s linear infinite;
         }
       }
     }
-    
+
     .material-list {
       margin-top: 20px;
     }
-    
+
     .empty-data {
-      padding: 40px 0;
+      padding: 60px 0;
     }
   }
-  
-  .material-upload {
-    width: 100%;
-  }
-  
+
   .preview-container {
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
     padding: 0 20px;
-    
+
     .file-info {
       text-align: center;
       margin-top: 20px;
+      color: $text-secondary;
     }
   }
 }
 
 .upload-form {
-  padding: 0 20px;
-  
-  .form-tip {
-    font-size: 12px;
-    color: #909399;
-    margin-top: 5px;
-  }
-  
   .upload-demo {
     width: 100%;
   }
 }
 
 .dialog-footer {
-  padding: 0 20px;
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
 }
 
 .upload-file-list {
@@ -495,63 +480,32 @@ onMounted(() => {
 }
 
 .upload-file-item {
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 10px;
+  border: 1px solid $border-base;
+  border-radius: 8px;
+  padding: 12px 16px;
   margin-bottom: 10px;
+  background-color: $bg-color-overlay;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: rgba($primary-color, 0.3);
+  }
+
+  .file-name {
+    font-size: 14px;
+    color: $text-primary;
+    margin-bottom: 8px;
+    display: block;
+    font-weight: 500;
+  }
 }
 
-.upload-file-item .file-name {
-  font-size: 14px;
-  color: #606266;
-  margin-bottom: 5px;
-  display: block;
-}
-
-/* 覆盖Element Plus对话框样式 */
-:deep(.el-dialog__body) {
-  padding: 20px 0;
-}
-
-:deep(.el-dialog__header) {
-  padding-left: 20px;
-  padding-right: 20px;
-  margin-right: 0;
-}
-
-:deep(.el-dialog__footer) {
-  padding-top: 10px;
-  padding-bottom: 15px;
-}
-
-/* 修改上传进度条样式 */
 :deep(.el-progress__text) {
-  color: #303133 !important; /* 深灰色字体，确保在各种背景上都可见 */
+  color: $text-secondary !important;
   font-size: 12px;
 }
 
 :deep(.el-progress--line) {
   margin-bottom: 10px;
-}
-
-.upload-file-item {
-  border: 1px solid #dcdfe6;
-  border-radius: 6px; /* 增加圆角 */
-  padding: 12px; /* 增加内边距 */
-  margin-bottom: 12px; /* 增加外边距 */
-  background-color: #fafafa; /* 轻微背景色 */
-  transition: box-shadow 0.3s; /* 添加过渡效果 */
-}
-
-.upload-file-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 悬停效果 */
-}
-
-.upload-file-item .file-name {
-  font-size: 14px;
-  color: #303133; /* 深灰色字体 */
-  margin-bottom: 8px; /* 增加底部间距 */
-  display: block;
-  font-weight: 500;
 }
 </style>

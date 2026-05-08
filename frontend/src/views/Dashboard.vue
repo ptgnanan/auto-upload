@@ -273,95 +273,108 @@ onMounted(() => {
 
 .dashboard {
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 
     h1 {
-      font-size: 24px;
+      font-size: 26px;
+      font-weight: 700;
       color: $text-primary;
       margin: 0;
+      letter-spacing: -0.5px;
     }
   }
 
   .dashboard-content {
     .stat-card {
-      height: 140px;
+      height: 148px;
       margin-bottom: 20px;
+      border: 1px solid $border-base;
+      background: linear-gradient(135deg, $bg-color-surface 0%, rgba($primary-color, 0.03) 100%);
+
+      :deep(.el-card__body) {
+        padding: 20px 24px;
+      }
 
       .stat-card-content {
         display: flex;
         align-items: center;
-        margin-bottom: 15px;
+        margin-bottom: 16px;
 
         .stat-icon {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          background-color: rgba($primary-color, 0.1);
+          width: 52px;
+          height: 52px;
+          border-radius: 14px;
+          background-color: rgba($primary-color, 0.12);
           display: flex;
           justify-content: center;
           align-items: center;
-          margin-right: 15px;
+          margin-right: 16px;
 
           .el-icon {
-            font-size: 30px;
+            font-size: 26px;
             color: $primary-color;
           }
 
           &.platform-icon {
-            background-color: rgba($success-color, 0.1);
+            background-color: rgba(#3b82f6, 0.12);
 
             .el-icon {
-              color: $success-color;
+              color: #3b82f6;
             }
           }
 
           &.content-icon {
-            background-color: rgba($info-color, 0.1);
+            background-color: rgba(#f59e0b, 0.12);
 
             .el-icon {
-              color: $info-color;
+              color: #f59e0b;
             }
           }
         }
 
         .stat-info {
           .stat-value {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 28px;
+            font-weight: 700;
             color: $text-primary;
             line-height: 1.2;
+            letter-spacing: -0.5px;
           }
 
           .stat-label {
-            font-size: 14px;
+            font-size: 13px;
             color: $text-secondary;
+            margin-top: 2px;
           }
         }
       }
 
       .stat-footer {
-        border-top: 1px solid $border-lighter;
-        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding-top: 12px;
 
         .stat-detail {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           color: $text-secondary;
           font-size: 13px;
 
           .el-tag {
             margin-right: 5px;
+            border-radius: 6px;
           }
         }
       }
     }
 
     .quick-actions {
-      margin: 20px 0 30px;
+      margin: 28px 0 32px;
 
       h2 {
         font-size: 18px;
-        margin-bottom: 15px;
+        font-weight: 600;
+        margin-bottom: 16px;
         color: $text-primary;
       }
 
@@ -372,57 +385,69 @@ onMounted(() => {
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: all 0.25s ease;
+        border: 1px solid $border-base;
 
         &:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+          transform: translateY(-4px);
+          border-color: rgba($primary-color, 0.3);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba($primary-color, 0.1);
         }
 
         .action-icon {
-          width: 50px;
-          height: 50px;
-          border-radius: 50%;
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
           background-color: rgba($primary-color, 0.1);
           display: flex;
           justify-content: center;
           align-items: center;
-          margin-bottom: 15px;
+          margin-bottom: 14px;
+          transition: background-color 0.2s;
 
           .el-icon {
-            font-size: 24px;
+            font-size: 22px;
             color: $primary-color;
           }
         }
 
+        &:hover .action-icon {
+          background-color: rgba($primary-color, 0.18);
+        }
+
         .action-title {
-          font-size: 16px;
-          font-weight: bold;
+          font-size: 15px;
+          font-weight: 600;
           color: $text-primary;
-          margin-bottom: 5px;
+          margin-bottom: 4px;
         }
 
         .action-desc {
-          font-size: 13px;
-          color: $text-secondary;
+          font-size: 12px;
+          color: $text-muted;
           text-align: center;
         }
       }
     }
 
     .recent-tasks {
-      margin-top: 30px;
+      margin-top: 32px;
 
       .section-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 15px;
+        margin-bottom: 16px;
 
         h2 {
           font-size: 18px;
+          font-weight: 600;
           color: $text-primary;
           margin: 0;
+        }
+
+        .el-button {
+          font-weight: 500;
         }
       }
     }
