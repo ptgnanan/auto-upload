@@ -275,11 +275,11 @@ const commonConfig = reactive({
 
 // 各渠道个性化配置（按平台存储）
 const platformConfigs = reactive({
-  douyin: { productTitle: '', productLink: '', aiContent: false, isOriginal: false, ... },
-  xiaohongshu: { collection: '', groupChat: '', location: '', isOriginal: false, ... },
-  kuaishou: { productTitle: '', productLink: '', aiContent: false, isOriginal: false, ... },
-  bilibili: { zone: '', tags: '', topic: '', isOriginal: false, ... },
-  channels: { isDraft: false, location: '', isOriginal: false, ... },
+  douyin: { productTitle: '', productLink: '', aiContent: false, isOriginal: false, scheduleTime: '', visibility: 'public', allowDownload: true },
+  xiaohongshu: { collection: '', groupChat: '', location: '', isOriginal: false, scheduleTime: '' },
+  kuaishou: { productTitle: '', productLink: '', aiContent: false, isOriginal: false, scheduleTime: '' },
+  bilibili: { zone: '', tags: '', topic: '', isOriginal: false, scheduleTime: '' },
+  channels: { isDraft: false, location: '', isOriginal: false },
 })
 ```
 
@@ -303,12 +303,24 @@ const platformConfigs = reactive({
 
 ## 7. 交互流程
 
-1. 用户进入发布中心 → 左侧自动展开第一个有账号的分组
-2. 点击分组头部 → 右侧显示公共配置 + 该渠道个性化设置（空表单）
-3. 点击具体账号 → 右侧显示该账号的配置（如有缓存则恢复）
-4. 编辑公共配置 → 对所有已选账号生效
-5. 编辑个性化配置 → 仅对该渠道账号生效
-6. 点击「一键发布」→ 验证必填项 → 构造请求数据 → 调用后端 API 发布
+### 7.1 页面加载
+
+1. 用户进入发布中心 → 从 accountStore 加载账号列表
+2. 按渠道自动分组，左侧展开第一个有账号的分组
+3. 右侧默认显示公共配置区（视频/封面/标题/描述/标签）+ 第一个渠道的个性化设置
+
+### 7.2 左侧导航
+
+- **点击分组头部（如「抖音」）**：右侧切换为「公共配置 + 该渠道个性化设置」表单。此模式配置的是渠道级模板，发布时该分组下的所有账号共享此配置。
+- **点击具体账号**：右侧切换为该账号的专属编辑视图，公共配置继承渠道模板值，个性化设置可单独微调。
+- **展开/折叠**：点击分组头部的 ▼/▶ 切换展开，不影响右侧内容。
+
+### 7.3 编辑与发布
+
+1. 编辑公共配置（视频/封面/标题/描述/标签）→ 实时更新，对所有账号生效
+2. 编辑个性化配置 → 仅对当前选中渠道的账号生效
+3. 点击「一键发布」→ 系统为每个已配置的账号生成独立任务 → 依次调用后端 API 发布 → 显示发布进度弹窗
+4. 点击「保存草稿」→ 将当前公共配置 + 各渠道个性化配置保存到本地，下次进入自动恢复
 
 ---
 
