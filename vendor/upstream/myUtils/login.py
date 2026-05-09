@@ -34,30 +34,55 @@ _SCRAPE_JS = '''() => {
     ];
     const imgs = [...document.querySelectorAll('img')];
 
-    // ====== 策略0 (最高优先级): 平台精确匹配 ======
-    // 抖音: div[class^="container-"] > div[class^="avatar-"] > img + div[class^="name-"]
-    const dyProfileContainer = document.querySelector('div[class^="container-"]');
-    if (dyProfileContainer) {
-        const dyAvImg = dyProfileContainer.querySelector(':scope > div[class^="avatar-"] > img');
-        const dyNameEl = dyProfileContainer.querySelector('div[class^="name-"]');
+    // ====== 工具函数 ======
+    const excludeTexts = ['登录','注册','密码','手机','首页','上传','数据','管理',
+        '发布','创作','视频','直播','消息','设置','帮助','退出','更多','搜索',
+        '扫码','关注','粉丝','获赞','作品','动态','喜欢','收藏',
+        '共创','中心','工具','服务','收益','任务','课程','通知','评论',
+        '互动','权限','认证','申请','开通','绑定','电商','带货',
+        '网址','链接','复制','分享','下载','打开','全部','菜单',
+        '内容','素材','流量','分析','商品','订单','结算','功能',
+        '主页','首页','个人','专栏','活动','热门','推荐',
+        '播放量','点赞数','评论数','转发数','浏览量','阅读量','新增','昨日'];
+
+    function isValidName(text) {
+        if (!text || text.length < 2 || text.length > 30) return false;
+        if (/^\\d+(\\.\\d+)?[万亿]$/.test(text)) return false;
+        if (/^\\d+$/.test(text)) return false;
+        for (const ex of excludeTexts) {
+            if (text.includes(ex)) return false;
+        }
+        return true;
+    }
+
+    // ====== 策略0 (最高优先级): 平台精确匹配，找到直接返回 ======
+    // 抖音: container-xxx > avatar-xxx > img + name-xxx
+    const dyAllContainers = document.querySelectorAll('div[class^="container-"]');
+    for (const dyContainer of dyAllContainers) {
+        const dyAvImg = dyContainer.querySelector(':scope > div[class^="avatar-"] > img');
+        const dyNameEl = dyContainer.querySelector('div[class^="name-"]');
         if (dyAvImg && dyNameEl && isValidName(dyNameEl.textContent.trim())) {
-            avatar = dyAvImg.src || '';
-            name = dyNameEl.textContent.trim();
-            candidates.push({text: name, method: 'douyin-profile-container'});
+            return {
+                name: dyNameEl.textContent.trim(),
+                avatar: dyAvImg.src || '',
+                debug: [{text: dyNameEl.textContent.trim(), method: 'douyin-profile-container'}]
+            };
         }
     }
     // 视频号: img[alt*="头像"] + h2.finder-nickname
-    if (!avatar) {
-        const wxAvatar = document.querySelector('img[alt*="头像"]');
-        const wxName = document.querySelector('h2.finder-nickname') || document.querySelector('[class*="nickname"]');
-        if (wxAvatar && wxName && isValidName(wxName.textContent.trim())) {
-            avatar = wxAvatar.src || '';
-            name = wxName.textContent.trim();
-            candidates.push({text: name, method: 'wechat-profile'});
-        }
+    const wxAvatar = document.querySelector('img[alt*="头像"]');
+    const wxName = document.querySelector('h2.finder-nickname') || document.querySelector('[class*="nickname"]');
+    if (wxAvatar && wxName && isValidName(wxName.textContent.trim())) {
+        return {
+            name: wxName.textContent.trim(),
+            avatar: wxAvatar.src || '',
+            debug: [{text: wxName.textContent.trim(), method: 'wechat-profile'}]
+        };
     }
 
-    // 优先匹配平台头像 CDN（精确匹配）
+    // ====== 以下为兜底策略 ======
+
+    // 头像: 优先匹配平台头像 CDN（精确匹配）
     for (const img of imgs) {
         const src = img.src || '';
         if (isAvatarUrl(src) && !src.includes('cover') && !src.includes('video')) {
@@ -80,27 +105,7 @@ _SCRAPE_JS = '''() => {
         }
     }
 
-    // ====== 昵称查找 ======
-    const excludeTexts = ['登录','注册','密码','手机','首页','上传','数据','管理',
-        '发布','创作','视频','直播','消息','设置','帮助','退出','更多','搜索',
-        '扫码','关注','粉丝','获赞','作品','动态','喜欢','收藏',
-        '共创','中心','工具','服务','收益','任务','课程','通知','评论',
-        '互动','权限','认证','申请','开通','绑定','电商','带货',
-        '网址','链接','复制','分享','下载','打开','全部','菜单',
-        '内容','素材','流量','分析','商品','订单','结算','功能',
-        '主页','首页','个人','专栏','活动','热门','推荐',
-        '播放量','点赞数','评论数','转发数','浏览量','阅读量','新增','昨日'];
-
-    function isValidName(text) {
-        if (!text || text.length < 2 || text.length > 30) return false;
-        if (/^\\d+(\\.\\d+)?[万亿]$/.test(text)) return false;
-        if (/^\\d+$/.test(text)) return false;
-        for (const ex of excludeTexts) {
-            if (text.includes(ex)) return false;
-        }
-        return true;
-    }
-
+    // 昵称查找
     // 策略A: 找到头像后，找头像旁边的 name 元素
     if (avatar) {
         const avatarImg = imgs.find(i => i.src === avatar);
@@ -160,10 +165,7 @@ _SCRAPE_JS = '''() => {
         }
     }
 
-    // 优先 avatar-sibling，再 near-avatar，再其他
-    const best = candidates.find(c => c.method === 'avatar-sibling')
-        || candidates.find(c => c.method === 'near-avatar')
-        || candidates[0];
+    const best = candidates[0];
     name = best ? best.text : '';
 
     return { name, avatar, debug: candidates.slice(0, 10) };
