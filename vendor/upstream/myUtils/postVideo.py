@@ -98,19 +98,25 @@ def post_video_xhs(title,files,tags,account_file,category=TencentZoneTypes.LIFES
             print(f"标题：{title}")
             print(f"描述：{desc}")
             print(f"Hashtag：{tags}")
+            # 小红书优先使用横版封面（landscape）
             app = XiaoHongShuVideo(title, file, tags, publish_datetimes, cookie, thumbnail_path=thumbnail_path, desc=desc or None, headless=False)
             asyncio.run(app.main(), debug=False)
 
 
 def post_video_bilibili(title, files, tags, account_file, category=None,
                         enableTimer=False, videos_per_day=1, daily_times=None,
-                        start_days=0, desc=''):
+                        start_days=0, desc='', thumbnailLandscape=None, thumbnailPortrait=None):
     """B站视频上传 — 浏览器自动化方式"""
     from uploader.bilibili_uploader.main import BilibiliVideo
 
     # 生成文件的完整路径
     account_file = [Path(BASE_DIR / "cookiesFile" / file) for file in account_file]
     files = [Path(BASE_DIR / "videoFile" / file) for file in files]
+
+    # B站使用横版封面
+    thumbnail_path = None
+    if thumbnailLandscape:
+        thumbnail_path = str(Path(BASE_DIR / "videoFile" / thumbnailLandscape))
 
     if enableTimer:
         publish_datetimes = generate_schedule_time_next_day(len(files), videos_per_day, daily_times, start_days)
@@ -130,6 +136,7 @@ def post_video_bilibili(title, files, tags, account_file, category=None,
                 publish_date=publish_datetimes[index] if isinstance(publish_datetimes, list) else publish_datetimes,
                 account_file=str(cookie),
                 desc=desc,
+                thumbnail_path=thumbnail_path,
                 headless=False,
             )
             asyncio.run(app.main(), debug=False)

@@ -19,8 +19,8 @@ app = Flask(__name__)
 #允许所有来源跨域访问
 CORS(app)
 
-# 限制上传文件大小为160MB
-app.config['MAX_CONTENT_LENGTH'] = 160 * 1024 * 1024
+# 限制上传文件大小为1GB
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024
 
 # 获取当前目录（假设 index.html 和 assets 在这里）
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -572,7 +572,7 @@ def postVideo():
                           start_days, thumbnail_path=thumbnail_portrait_path or thumbnail_path, desc=desc)
             case 5:
                 post_video_bilibili(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
-                          start_days, desc=desc)
+                          start_days, desc=desc, thumbnailLandscape=thumbnail_landscape_path)
             case _:
                 return jsonify({"code": 400, "msg": f"不支持的平台类型: {type}", "data": None}), 400
 
@@ -671,7 +671,7 @@ def postVideoBatch():
                           start_days)
             case 5:
                 post_video_bilibili(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
-                          start_days)
+                          start_days, thumbnailLandscape=thumbnail_landscape_path, thumbnailPortrait=thumbnail_portrait_path)
     # 返回响应给客户端
     return jsonify(
         {
