@@ -1,0 +1,23 @@
+[package]
+name = "ai-social-auto-upload"
+version = "0.1.0"
+description = "AI Social Auto Upload - Desktop App"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "ai_social_auto_upload_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+env_logger = "0.11"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
