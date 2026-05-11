@@ -2,6 +2,7 @@
 
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
 use ai_social_auto_upload_lib::{check_webview2, create_data_dirs, get_data_dir};
 use tauri::{Manager, WindowEvent};
 
@@ -42,7 +43,7 @@ fn main() {
     let backend_path = exe_dir.join("backend").join("app.py");
 
     // Spawn Python backend
-    let mut child = match Command::new(&python_path)
+    let child = match Command::new(&python_path)
         .arg(&backend_path)
         .env("SAU_PORT", port.to_string())
         .env("SAU_DATA_DIR", data_dir.to_str().unwrap())
@@ -50,7 +51,7 @@ fn main() {
         .stderr(Stdio::piped())
         .spawn()
     {
-        Ok(c) => c,
+        Ok(c) => Arc::new(Mutex::new(c)),
         Err(e) => {
             eprintln!("ERROR: Failed to start backend: {}", e);
             eprintln!("Python path: {:?}", python_path);
@@ -60,19 +61,21 @@ fn main() {
     };
 
     // Log backend output in background
-    if let Some(stdout) = child.stdout.take() {
-        std::thread::spawn(move || {
-            for line in BufReader::new(stdout).lines().map_while(Result::ok) {
-                log::info!("[backend] {}", line);
-            }
-        });
-    }
-    if let Some(stderr) = child.stderr.take() {
-        std::thread::spawn(move || {
-            for line in BufReader::new(stderr).lines().map_while(Result::ok) {
-                eprintln!("[backend error] {}", line);
-            }
-        });
+    if let Ok(mut child_guard) = child.lock() {
+        if let Some(stdout) = child_guard.stdout.take() {
+            std::thread::spawn(move || {
+                for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+                    log::info!("[backend] {}", line);
+                }
+            });
+        }
+        if let Some(stderr) = child_guard.stderr.take() {
+            std::thread::spawn(move || {
+                for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                    eprintln!("[backend error] {}", line);
+                }
+            });
+        }
     }
 
     // Wait for backend to be ready
@@ -86,11 +89,16 @@ fn main() {
         }
         if i == max_wait - 1 {
             eprintln!("ERROR: Backend did not start within {} seconds", max_wait);
-            child.kill().ok();
+            if let Ok(mut c) = child.lock() {
+                c.kill().ok();
+            }
             std::process::exit(1);
         }
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
+
+    // Clone for use in on_window_event
+    let child_for_close = child.clone();
 
     // Create Tauri app
     tauri::Builder::default()
@@ -105,7 +113,9 @@ fn main() {
         .on_window_event(move |_window, event| {
             if let WindowEvent::CloseRequested { .. } = event {
                 log::info!("Window closed, shutting down");
-                child.kill().ok();
+                if let Ok(mut c) = child_for_close.lock() {
+                    c.kill().ok();
+                }
                 std::process::exit(0);
             }
         })
