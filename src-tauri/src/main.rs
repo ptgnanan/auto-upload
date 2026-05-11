@@ -19,15 +19,8 @@ fn main() {
     writeln!(log_file, "[{}] INFO: Starting AI Social Auto Upload", unix_ts()).unwrap();
     writeln!(log_file, "[{}] INFO: Log file: {:?}", unix_ts(), log_path).unwrap();
 
-    // Check WebView2
-    match check_webview2() {
-        Ok(()) => writeln!(log_file, "[{}] INFO: WebView2 check OK", unix_ts()).unwrap(),
-        Err(e) => {
-            writeln!(log_file, "[{}] ERROR: WebView2 check failed: {}", unix_ts(), e).unwrap();
-            eprintln!("ERROR: {}", e);
-            std::process::exit(1);
-        }
-    }
+    // NOTE: WebView2 check removed - Tauri will auto-install via embedBootstrapper when window opens
+    writeln!(log_file, "[{}] INFO: WebView2 will be installed by Tauri if needed", unix_ts()).unwrap();
 
     let data_dir = get_data_dir();
     writeln!(log_file, "[{}] INFO: Data directory: {:?}", unix_ts(), data_dir).unwrap();
@@ -43,8 +36,9 @@ fn main() {
     writeln!(log_file, "[{}] INFO: Using backend port: {}", unix_ts(), port).unwrap();
 
     // Python path and backend path
-    let python_path = exe_dir.join("python").join("python.exe");
+    let python_path = exe_dir.join("python").join("Scripts").join("python.exe");
     let backend_path = exe_dir.join("backend").join("app.py");
+    writeln!(log_file, "[{}] INFO: exe_dir: {:?}", unix_ts(), exe_dir).unwrap();
     writeln!(log_file, "[{}] INFO: Python path: {:?}", unix_ts(), python_path).unwrap();
     writeln!(log_file, "[{}] INFO: Backend path: {:?}", unix_ts(), backend_path).unwrap();
 
