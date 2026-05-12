@@ -120,10 +120,11 @@ class BilibiliVideo(BilibiliBaseUploader):
         tags,
         publish_date: datetime | int,
         account_file,
-        category: int | None = None,
+        category: int | str | None = None,
         thumbnail_path=None,
         desc: str | None = None,
         publish_strategy: str | None = None,
+        ai_content: str | None = None,
         debug: bool = DEBUG_MODE,
         headless: bool = LOCAL_CHROME_HEADLESS,
     ):
@@ -136,10 +137,18 @@ class BilibiliVideo(BilibiliBaseUploader):
         )
         self.title = title
         self.file_path = file_path
-        self.tags = tags or []
-        self.category = category or BILIBILI_DEFAULT_TID
+        # 解析标签：支持 "#标签1 #标签2" 或 "标签1,标签2" 或混合格式
+        if isinstance(tags, str) and tags.strip():
+            import re
+            self.tags = [t.strip() for t in re.split(r'[,，#]', tags) if t.strip()]
+        elif isinstance(tags, list):
+            self.tags = tags
+        else:
+            self.tags = []
+        self.category = category or BILIBILI_DEFAULT_TID  # int(tid) or str(中文名)
         self.thumbnail_path = thumbnail_path
         self.desc = desc or ""
+        self.ai_content = ai_content or ""
 
     async def validate_upload_args(self):
         await self.validate_base_args()
@@ -244,68 +253,44 @@ class BilibiliVideo(BilibiliBaseUploader):
     }
 
     async def _set_category(self, page: Page):
-        """设置视频分区（容错：失败不阻塞上传）"""
+        """设置视频分区（新版B站上传页面）"""
         if not self.category:
             return
 
-        cn_name = self._TID_CN_NAME.get(self.category, None)
-        bilibili_logger.info(_msg("📂", f"设置分区 tid={self.category} 中文名={cn_name}"))
+        # 解析分区名称：支持 int(tid) 或 str(中文名)
+        if isinstance(self.category, int):
+            cn_name = self._TID_CN_NAME.get(self.category, None)
+        else:
+            cn_name = str(self.category).strip()
+
+        bilibili_logger.info(_msg("📂", f"设置分区: category={self.category}, 中文名={cn_name}"))
         try:
             log_dir = Path(__file__).parent.parent.parent.parent / "data" / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
 
             if not cn_name:
-                bilibili_logger.warning(_msg("⚠️", f"未知的 tid: {self.category}，跳过分区设置"))
+                bilibili_logger.warning(_msg("⚠️", f"未知的分区: {self.category}，跳过分区设置"))
                 return
 
-            # 用 JS 点击分区下拉框并选择目标分区
-            result = await page.evaluate("""(cnName) => {
-                // 找到分区下拉框（通常是当前显示分区名的可点击元素）
-                const allElements = document.querySelectorAll(
-                    '[class*="select"], [class*="category"], [class*="zone"], [class*="partition"]'
-                );
-                for (const el of allElements) {
-                    // 找到看起来像分区选择器的元素
-                    const rect = el.getBoundingClientRect();
-                    if (rect.width > 50 && rect.height > 10 && rect.height < 80
-                        && el.textContent.trim().length < 20) {
-                        el.click();
-                        return {action: 'clicked_selector', text: el.textContent.trim()};
-                    }
-                }
-                return null;
-            }""", cn_name)
+            # Step 1: 点击 .select-controller 打开分区下拉框
+            select_controller = page.locator('.select-controller').first
+            await select_controller.wait_for(state="visible", timeout=10000)
+            await select_controller.click()
+            bilibili_logger.info(_msg("📂", "已点击 select-controller 打开分区下拉框"))
             await asyncio.sleep(1)
 
-            await page.screenshot(path=str(log_dir / "bilibili_partition_open.png"), full_page=True)
-
-            if result:
-                bilibili_logger.info(_msg("📂", f"分区选择器已点击: {result}"))
+            # Step 2: 在下拉列表中点击目标分区
+            # 下拉项格式: <div title="分区名" class="drop-list-v2-item">
+            target_item = page.locator(f'.drop-list-v2-item[title="{cn_name}"]')
+            if await target_item.count() > 0:
+                await target_item.first.click()
+                bilibili_logger.success(_msg("✅", f"分区已设置: {cn_name}"))
             else:
-                bilibili_logger.warning(_msg("⚠️", "未找到分区选择器"))
-                return
+                bilibili_logger.warning(_msg("⚠️", f"下拉列表中未找到分区: {cn_name}"))
+                await page.screenshot(path=str(log_dir / "bilibili_partition_not_found.png"), full_page=True)
 
-            # 在展开的下拉菜单中点击目标分区
-            clicked = await page.evaluate("""(cnName) => {
-                const items = document.querySelectorAll(
-                    '[class*="option"], [class*="item"], [class*="select"] li, '
-                    + '[class*="category"] div, [class*="partition"] div'
-                );
-                for (const el of items) {
-                    const text = el.textContent.trim();
-                    if (text === cnName) {
-                        el.click();
-                        return text;
-                    }
-                }
-                return null;
-            }""", cn_name)
-
-            if clicked:
-                bilibili_logger.success(_msg("✅", f"分区已设置: {clicked}"))
-            else:
-                bilibili_logger.warning(_msg("⚠️", f"未找到分区: {cn_name}，将使用默认分区"))
             await asyncio.sleep(1)
+            await page.screenshot(path=str(log_dir / "bilibili_partition_selected.png"), full_page=True)
         except Exception as exc:
             bilibili_logger.warning(_msg("⚠️", f"设置分区失败（不影响上传）: {exc}"))
 
@@ -315,19 +300,60 @@ class BilibiliVideo(BilibiliBaseUploader):
             return
 
         bilibili_logger.info(_msg("🏷️", f"添加 {len(self.tags)} 个标签"))
-        tag_input = page.locator(
-            'input[placeholder*="回车键Enter创建标签"], '
-            'input[placeholder*="Enter创建标签"], '
-            'input[placeholder*="标签"]'
-        ).first
-        await tag_input.wait_for(state="visible", timeout=10000)
-        for tag in self.tags[:10]:
-            await tag_input.fill("")
-            await tag_input.fill(str(tag))
-            await asyncio.sleep(0.3)
-            await tag_input.press("Enter")
-            await asyncio.sleep(0.5)
-            bilibili_logger.info(_msg("🏷️", f"已添加标签: {tag}"))
+
+        log_dir = Path(__file__).parent.parent.parent.parent / "data" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        # 尝试多种选择器定位标签输入框
+        tag_input = None
+        selectors = [
+            'input[placeholder*="回车键Enter创建标签"]',
+            'input[placeholder*="Enter创建标签"]',
+            'input[placeholder*="按回车"]',
+            'input[placeholder*="标签"]',
+            '.tag-input input',
+            '[class*="tag"] input[type="text"]',
+        ]
+        for sel in selectors:
+            try:
+                loc = page.locator(sel).first
+                if await loc.count() > 0 and await loc.is_visible():
+                    tag_input = loc
+                    bilibili_logger.info(_msg("🏷️", f"找到标签输入框: {sel}"))
+                    break
+            except Exception:
+                continue
+
+        if tag_input is None:
+            bilibili_logger.warning(_msg("⚠️", "未找到标签输入框，尝试截图调试"))
+            await page.screenshot(path=str(log_dir / "bilibili_tag_input_not_found.png"), full_page=True)
+            return
+
+        for i, tag in enumerate(self.tags[:10]):
+            try:
+                # 每次重新定位输入框（添加标签后DOM可能变化）
+                tag_input = None
+                for sel in selectors:
+                    try:
+                        loc = page.locator(sel).first
+                        if await loc.count() > 0 and await loc.is_visible():
+                            tag_input = loc
+                            break
+                    except Exception:
+                        continue
+                if tag_input is None:
+                    bilibili_logger.warning(_msg("⚠️", f"标签输入框丢失，停止添加"))
+                    break
+
+                await tag_input.click()
+                await asyncio.sleep(0.3)
+                await tag_input.type(str(tag), delay=50)
+                await asyncio.sleep(0.3)
+                await tag_input.press("Enter")
+                await asyncio.sleep(0.5)
+                bilibili_logger.info(_msg("🏷️", f"已添加标签 ({i+1}/{min(len(self.tags), 10)}): {tag}"))
+            except Exception as exc:
+                bilibili_logger.warning(_msg("⚠️", f"添加标签失败 '{tag}': {exc}"))
 
     async def _fill_desc(self, page: Page):
         """填写视频简介"""
@@ -349,6 +375,63 @@ class BilibiliVideo(BilibiliBaseUploader):
             await page.keyboard.type(self.desc, delay=10)
         else:
             bilibili_logger.warning(_msg("⚠️", "未找到简介编辑器"))
+
+    async def _set_declaration(self, page: Page):
+        """设置创作声明（如AI生成内容声明等）"""
+        if not self.ai_content:
+            return
+
+        bilibili_logger.info(_msg("📋", f"设置创作声明: {self.ai_content}"))
+        try:
+            log_dir = Path(__file__).parent.parent.parent.parent / "data" / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+
+            # Step 1: 点击"更多设置"展开面板
+            more_settings = page.locator('span.label:has-text("更多设置")')
+            if await more_settings.count() > 0 and await more_settings.first.is_visible():
+                await more_settings.first.click()
+                bilibili_logger.info(_msg("📋", "已点击'更多设置'"))
+                await asyncio.sleep(2)
+            else:
+                bilibili_logger.warning(_msg("⚠️", "未找到'更多设置'按钮"))
+                return
+
+            # Step 2: 点击"创作声明"选择器区域
+            # 找到包含"请选择符合您视频内容的创作声明"的元素
+            declaration_selector = page.locator('p.select-item-cont:has-text("请选择符合您视频内容的创作声明")')
+            if await declaration_selector.count() > 0 and await declaration_selector.first.is_visible():
+                await declaration_selector.first.click()
+                bilibili_logger.info(_msg("📋", "已点击'创作声明'选择器"))
+                await asyncio.sleep(1)
+            else:
+                bilibili_logger.warning(_msg("⚠️", "未找到'创作声明'选择器"))
+                await page.screenshot(path=str(log_dir / "bilibili_declaration_not_found.png"), full_page=True)
+                return
+
+            # Step 3: 在展开的声明列表中，选择匹配的声明
+            # 声明项的格式: "作者声明：xxx"
+            # 前端传来的 ai_content 值不含"作者声明："前缀，需要匹配
+            target_text = self.ai_content.strip()
+            mark_items = page.locator('.mark-item')
+            count = await mark_items.count()
+            clicked = False
+            for i in range(count):
+                item = mark_items.nth(i)
+                item_text = (await item.text_content() or "").strip()
+                # 匹配：item_text 是 "作者声明：xxx"，target_text 是 "xxx"
+                if target_text in item_text:
+                    await item.click()
+                    bilibili_logger.success(_msg("✅", f"已选择创作声明: {item_text}"))
+                    clicked = True
+                    break
+
+            if not clicked:
+                bilibili_logger.warning(_msg("⚠️", f"未找到匹配的声明: {target_text}"))
+                await page.screenshot(path=str(log_dir / "bilibili_declaration_not_matched.png"), full_page=True)
+
+            await asyncio.sleep(1)
+        except Exception as exc:
+            bilibili_logger.warning(_msg("⚠️", f"设置创作声明失败（不影响上传）: {exc}"))
 
     async def _set_thumbnail(self, page: Page):
         """通过浏览器自动化方式上传封面"""
@@ -504,7 +587,10 @@ class BilibiliVideo(BilibiliBaseUploader):
             # 7. 设置封面
             await self._set_thumbnail(page)
 
-            # 8. 设置定时发布
+            # 8. 设置创作声明（如AI生成内容等）
+            await self._set_declaration(page)
+
+            # 9. 设置定时发布
             if self.publish_strategy == BILIBILI_PUBLISH_STRATEGY_SCHEDULED and self.publish_date != 0:
                 await self._set_schedule_time(page, self.publish_date)
 
@@ -521,82 +607,38 @@ class BilibiliVideo(BilibiliBaseUploader):
             submitted = False
             for attempt in range(10):
                 try:
-                    # 用 JS 直接查找并点击"立即投稿"按钮
-                    # 只匹配精确文字"立即投稿"，避免匹配左侧导航栏的"投稿"
-                    clicked = await page.evaluate("""() => {
-                        // 优先找"立即投稿"，其次找底部区域的投稿按钮
-                        const candidates = document.querySelectorAll(
-                            'button, [role="button"], [class*="submit"], [class*="publish"]'
-                        );
-                        // 第一轮：精确匹配"立即投稿"
-                        for (const el of candidates) {
-                            const text = el.textContent.trim();
-                            if (text === '立即投稿') {
-                                const rect = el.getBoundingClientRect();
-                                if (rect.width > 0 && rect.height > 0) {
-                                    el.scrollIntoView({behavior: 'instant', block: 'center'});
-                                    el.click();
-                                    return text;
-                                }
-                            }
-                        }
-                        // 第二轮：放宽到 button 和 role=button，匹配包含"投稿"的
-                        const buttons = document.querySelectorAll('button, [role="button"]');
-                        for (const el of buttons) {
-                            const text = el.textContent.trim();
-                            if (text === '立即投稿') {
-                                el.click();
-                                return text;
-                            }
-                        }
-                        return null;
-                    }""")
-
-                    if clicked:
-                        bilibili_logger.info(_msg("✅", f"已通过 JS 点击投稿按钮: {clicked}"))
-                        await asyncio.sleep(3)
+                    # 点击 <span class="submit-add" data-reporter-id="81">立即投稿</span>
+                    submit_span = page.locator('span.submit-add')
+                    if await submit_span.count() > 0:
+                        await submit_span.first.scroll_into_view_if_needed()
+                        await submit_span.first.click()
+                        bilibili_logger.info(_msg("✅", "已点击立即投稿按钮"))
                     else:
-                        bilibili_logger.info(_msg("🔍", f"JS 未找到投稿按钮，重试 {attempt + 1}/10"))
+                        bilibili_logger.info(_msg("🔍", f"未找到投稿按钮，重试 {attempt + 1}/10"))
                         await asyncio.sleep(3)
                         continue
 
-                    # 等待页面变化：URL 跳转 OR 按钮消失 OR 成功提示
-                    current_url = page.url
-                    for wait_i in range(10):
+                    # 等待投稿结果：检查"立即投稿"按钮是否消失
+                    await asyncio.sleep(3)
+                    for wait_i in range(15):
                         await asyncio.sleep(2)
-                        new_url = page.url
-                        # URL 变了 = 投稿成功跳转
-                        if new_url != current_url:
-                            bilibili_logger.success(
-                                _msg("🎉", f"B站视频投稿成功，已跳转到: {new_url}")
-                            )
+                        # 检查立即投稿按钮是否已消失
+                        btn_exists = await page.locator('span.submit-add').count() > 0
+                        if not btn_exists:
+                            bilibili_logger.success(_msg("🎉", "B站视频投稿成功（立即投稿按钮已消失）"))
                             submitted = True
                             break
-                        # 按钮消失了 = 页面已变化（SPA 内部跳转）
-                        btn_still_exists = await page.evaluate("""() => {
-                            const els = document.querySelectorAll('button, [role="button"]');
-                            for (const el of els) {
-                                if (el.textContent.trim() === '立即投稿') return true;
-                            }
-                            return false;
-                        }""")
-                        if not btn_still_exists:
-                            bilibili_logger.success(_msg("🎉", "B站视频投稿成功（投稿按钮已消失）"))
-                            submitted = True
-                            break
-                        # 检查是否出现成功提示
-                        success_el = page.locator(
-                            'text=发布成功, text=投稿成功, text=提交成功'
-                        ).first
-                        if await success_el.count() > 0 and await success_el.is_visible():
-                            bilibili_logger.success(_msg("🎉", "B站视频投稿成功"))
+
+                        # 同时检查URL是否已跳转
+                        if page.url != BILIBILI_UPLOAD_URL and "/platform/upload/" not in page.url:
+                            bilibili_logger.success(_msg("🎉", f"B站视频投稿成功，已跳转到: {page.url}"))
                             submitted = True
                             break
 
                     if submitted:
                         break
 
-                    # 页面没变化，截图记录
+                    # 按钮仍在，截图记录
                     bilibili_logger.info(_msg("🔄", f"点击后页面未变化，重试 {attempt + 1}/10"))
                     await page.screenshot(
                         path=str(log_dir / f"bilibili_submit_{attempt}.png"),
@@ -613,6 +655,17 @@ class BilibiliVideo(BilibiliBaseUploader):
 
             if not submitted:
                 bilibili_logger.warning(_msg("⚠️", "投稿提交未能确认成功，但可能已经提交"))
+
+            # 提交成功后等待页面完全处理，避免过早关闭浏览器
+            if submitted:
+                bilibili_logger.info(_msg("⏳", "等待B站处理投稿（10秒）"))
+                await asyncio.sleep(10)
+                # 截图记录最终状态
+                try:
+                    await page.screenshot(path=str(log_dir / "bilibili_after_submit.png"), full_page=True)
+                    bilibili_logger.info(_msg("📸", "投稿后截图已保存"))
+                except Exception:
+                    pass
 
             upload_success = True
         finally:
