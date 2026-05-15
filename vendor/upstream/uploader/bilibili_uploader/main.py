@@ -18,7 +18,6 @@ from patchright.async_api import async_playwright
 
 from conf import DEBUG_MODE, LOCAL_CHROME_HEADLESS, LOCAL_CHROME_PATH
 from uploader.base_video import BaseVideoUploader
-from utils.base_social_media import set_init_script
 from utils.constant import VideoZoneTypes
 from utils.log import bilibili_logger
 
@@ -43,7 +42,6 @@ async def cookie_auth(account_file: str) -> bool:
         browser = await playwright.chromium.launch(**_opts)
         try:
             context = await browser.new_context(storage_state=account_file)
-            context = await set_init_script(context)
             page = await context.new_page()
             await page.goto(BILIBILI_UPLOAD_URL)
             if "passport.bilibili.com" in page.url:
@@ -599,7 +597,6 @@ class BilibiliVideo(BilibiliBaseUploader):
             _opts['executable_path'] = self.local_executable_path
         browser = await playwright.chromium.launch(**_opts)
         context = await browser.new_context(storage_state=self.account_file)
-        context = await set_init_script(context)
 
         upload_success = False
         try:

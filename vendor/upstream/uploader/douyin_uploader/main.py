@@ -12,7 +12,6 @@ from patchright.async_api import async_playwright
 
 from conf import DEBUG_MODE, LOCAL_CHROME_HEADLESS, LOCAL_CHROME_PATH
 from uploader.base_video import BaseVideoUploader
-from utils.base_social_media import set_init_script
 from utils.login_qrcode import build_login_qrcode_path
 from utils.login_qrcode import decode_qrcode_from_path
 from utils.login_qrcode import print_terminal_qrcode
@@ -56,7 +55,6 @@ async def cookie_auth(account_file):
         browser = await playwright.chromium.launch(**_opts)
         try:
             context = await browser.new_context(storage_state=account_file)
-            context = await set_init_script(context)
             page = await context.new_page()
             await page.goto("https://creator.douyin.com/creator-micro/content/upload")
             try:
@@ -184,7 +182,6 @@ async def douyin_cookie_gen(
             _opts['executable_path'] = LOCAL_CHROME_PATH
         browser = await playwright.chromium.launch(**_opts)
         context = await browser.new_context()
-        context = await set_init_script(context)
         qrcode_path = None
         result = _build_login_result(False, "failed", "抖音登录失败", account_file)
         try:
@@ -541,7 +538,6 @@ class DouYinVideo(DouYinBaseUploader):
             storage_state=f"{self.account_file}",
             permissions=["geolocation"],
         )
-        context = await set_init_script(context)
 
         page = await context.new_page()
         await page.goto("https://creator.douyin.com/creator-micro/content/upload")
@@ -740,7 +736,6 @@ class DouYinNote(DouYinBaseUploader):
             storage_state=f"{self.account_file}",
             permissions=["geolocation"],
         )
-        context = await set_init_script(context)
 
         upload_success = False
         try:

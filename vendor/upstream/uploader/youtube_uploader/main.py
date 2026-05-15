@@ -19,7 +19,6 @@ from patchright.async_api import async_playwright
 
 from conf import DEBUG_MODE, LOCAL_CHROME_HEADLESS, LOCAL_CHROME_PATH
 from uploader.base_video import BaseVideoUploader
-from utils.base_social_media import set_init_script
 from utils.log import youtube_logger
 
 YOUTUBE_STUDIO_URL = "https://studio.youtube.com"
@@ -39,7 +38,6 @@ async def cookie_auth(account_file: str) -> bool:
         browser = await playwright.chromium.launch(**_opts)
         try:
             context = await browser.new_context(storage_state=account_file)
-            context = await set_init_script(context)
             page = await context.new_page()
             await page.goto(YOUTUBE_STUDIO_URL)
             # 如果跳转到登录页面则 cookie 无效
@@ -353,7 +351,6 @@ class YouTubeVideo(YouTubeBaseUploader):
             _opts['executable_path'] = self.local_executable_path
         browser = await playwright.chromium.launch(**_opts)
         context = await browser.new_context(storage_state=self.account_file)
-        context = await set_init_script(context)
 
         upload_success = False
         try:

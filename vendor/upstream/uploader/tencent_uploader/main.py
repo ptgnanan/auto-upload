@@ -13,7 +13,6 @@ from patchright.async_api import async_playwright
 
 from conf import BASE_DIR, DEBUG_MODE, LOCAL_CHROME_HEADLESS, LOCAL_CHROME_PATH
 from uploader.base_video import BaseVideoUploader
-from utils.base_social_media import set_init_script
 from utils.log import tencent_logger
 
 TENCENT_LOGIN_URL = "https://channels.weixin.qq.com"
@@ -109,7 +108,6 @@ async def cookie_auth(account_file):
         browser = await playwright.chromium.launch(**_build_launch_kwargs(headless=True))
         try:
             context = await browser.new_context(storage_state=account_file)
-            context = await set_init_script(context)
             page = await context.new_page()
             await page.goto(TENCENT_UPLOAD_URL)
             await page.wait_for_url(TENCENT_UPLOAD_URL, timeout=5000)
@@ -959,7 +957,6 @@ class TencentNote(TencentBaseUploader):
 
         browser = await playwright.chromium.launch(**_build_launch_kwargs(headless=self.headless))
         context = await browser.new_context(storage_state=self.account_file)
-        context = await set_init_script(context)
 
         try:
             page = await context.new_page()
