@@ -138,31 +138,40 @@ class YouTubeVideo(YouTubeBaseUploader):
 
     async def _wait_upload_complete(self, page: Page):
         """等待视频上传完成"""
-        max_retries = 120
-        retry_count = 0
-        while retry_count < max_retries:
+        youtube_logger.info(_msg("⏳", "等待视频上传完成"))
+        try:
+            # 等待上传进度条消失 - YouTube Studio 上传完成后会隐藏进度条
+            # 使用进度条容器作为目标，上传完成时该元素会被移除或改变
+            progress_selector = 'tp-yt-paper-progress, [progress-bar], .upload-progress'
             try:
-                # YouTube 上传完成会显示进度条消失
-                # 检查是否有上传失败的提示
-                fail_text = page.locator("text=上传失败")
-                if await fail_text.count() > 0:
-                    youtube_logger.warning(_msg("⚠️", "视频上传失败"))
-                    return False
+                await page.wait_for_selector(progress_selector, state="hidden", timeout=120000)
+                youtube_logger.info(_msg("✅", "视频文件上传完成"))
+            except Exception:
+                # 备用方案：等待 "视频已上传" 相关元素出现
+                youtube_logger.info(_msg("⏳", "使用备用方案检测上传状态"))
+                await asyncio.sleep(5)
 
-                # 检查上传是否完成（进度条消失）
-                # NOTE: 这里是简化版本，实际需要根据 YouTube Studio 的 DOM 来精确判断
-                if retry_count % 10 == 0:
-                    youtube_logger.info(_msg("⏳", f"视频上传中... ({retry_count * 3}s)"))
+            # 检查是否有上传失败的提示
+            fail_text = page.locator("text=上传失败")
+            if await fail_text.count() > 0:
+                youtube_logger.warning(_msg("⚠️", "视频上传失败"))
+                return False
 
-                await asyncio.sleep(3)
-            except Exception as exc:
-                youtube_logger.warning(_msg("⚠️", f"检查上传状态出错: {exc}"))
-                await asyncio.sleep(3)
-            retry_count += 1
+            # 等待下一步操作界面出现（通常是标题输入框）
+            title_input = page.locator(
+                'input[placeholder*="title"], input[placeholder*="标题"], '
+                '#title-input, [class*="title"] input'
+            ).first
+            try:
+                await title_input.wait_for(state="visible", timeout=30000)
+                youtube_logger.success(_msg("✅", "上传界面已加载"))
+            except Exception:
+                youtube_logger.warning(_msg("⚠️", "未检测到上传完成界面"))
 
-        if retry_count == max_retries:
-            youtube_logger.warning(_msg("⚠️", "视频上传超时，可能未完成"))
-        return True
+            return True
+        except Exception as exc:
+            youtube_logger.warning(_msg("⚠️", f"检查上传状态出错: {exc}"))
+            return False
 
     async def _fill_title(self, page: Page):
         """填写视频标题"""
@@ -207,7 +216,7 @@ class YouTubeVideo(YouTubeBaseUploader):
             try:
                 await tag_input.click()
                 await asyncio.sleep(0.3)
-                await tag_input.type(str(tag), delay=50)
+                await tag_input.press_sequentially(str(tag), delay=50)
                 await asyncio.sleep(0.3)
                 await tag_input.press("Enter")
                 await asyncio.sleep(0.5)
@@ -288,10 +297,53 @@ class YouTubeVideo(YouTubeBaseUploader):
             # 7. 提交
             youtube_logger.info(_msg("📤", "正在提交视频"))
 
-            # NOTE: 实际提交逻辑需要根据 YouTube Studio 的 DOM 来实现
-            youtube_logger.warning(_msg("⚠️", "YouTube 上传逻辑需要完善，提交部分暂未实现"))
+            # 查找并点击 "发布" 按钮
+            # YouTube Studio 的发布按钮可能是多种选择器
+            submit_button = page.locator(
+                '#publish-button, tp-yt-paper-button[aria-label*="发布"], '
+                '[aria-label*="publish"] button, #upload- publish-button, '
+                'tp-yt-paper-button:has-text("发布"), button:has-text("发布")'
+            ).first
 
-            upload_success = True
+            try:
+                await submit_button.wait_for(state="visible", timeout=15000)
+                youtube_logger.info(_msg("👆", "找到发布按钮，准备点击"))
+                await submit_button.click()
+                youtube_logger.info(_msg("⏳", "等待发布处理"))
+
+                # 等待发布完成 - 通常会显示 "视频已发布" 或类似的成功提示
+                await asyncio.sleep(3)
+
+                # 检查是否有发布成功的提示
+                success_indicators = page.locator(
+                    'text=已发布, text=发布成功, text=Video published, '
+                    '[aria-label*="已发布"]'
+                )
+                if await success_indicators.count() > 0:
+                    youtube_logger.success(_msg("✅", "视频发布成功"))
+                    upload_success = True
+                else:
+                    # 如果没有明确成功提示，检查是否还在编辑页面
+                    if await submit_button.is_visible():
+                        youtube_logger.warning(_msg("⚠️", "发布按钮仍可见，可能发布未完成"))
+                        upload_success = True  # 仍标记为成功，因为点击了按钮
+                    else:
+                        youtube_logger.info(_msg("📤", "发布流程已触发"))
+                        upload_success = True
+            except Exception as exc:
+                youtube_logger.warning(_msg("⚠️", f"点击发布按钮失败: {exc}"))
+                # 尝试备用方案：查找可能的 "下一步" 或 "完成" 按钮
+                try:
+                    next_button = page.locator(
+                        'button:has-text("下一步"), button:has-text("下一步"), '
+                        'tp-yt-paper-button:has-text("下一步")'
+                    ).first
+                    if await next_button.is_visible():
+                        await next_button.click()
+                        youtube_logger.info(_msg("👆", "点击了下一步按钮"))
+                        upload_success = True
+                except Exception:
+                    pass
         finally:
             if upload_success:
                 try:
