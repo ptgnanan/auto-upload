@@ -17,7 +17,7 @@ from patchright.async_api import Page
 from patchright.async_api import Playwright
 from patchright.async_api import async_playwright
 
-from conf import DEBUG_MODE, LOCAL_CHROME_HEADLESS
+from conf import DEBUG_MODE, LOCAL_CHROME_HEADLESS, _load_proxy_url
 from myUtils.browser import create_browser, create_context, create_persistent_context
 from uploader.base_video import BaseVideoUploader
 from utils.log import youtube_logger
@@ -31,9 +31,10 @@ def _msg(emoji: str, text: str) -> str:
 
 async def cookie_auth(account_file: str) -> bool:
     """校验 YouTube cookie 是否有效"""
-    from conf import LOGIN_HEADLESS
+    from conf import LOGIN_HEADLESS, _load_proxy_url
     async with async_playwright() as playwright:
-        browser = await create_browser(playwright, headless=LOGIN_HEADLESS)
+        _proxy = _load_proxy_url()
+        browser = await create_browser(playwright, headless=LOGIN_HEADLESS, proxy={"server": _proxy} if _proxy else None)
         try:
             context = await create_context(browser, storage_state=account_file)
             page = await context.new_page()
@@ -59,10 +60,10 @@ async def youtube_cookie_gen(id, status_queue):
     import uuid
     import os
     import tempfile
-    from conf import BASE_DIR
+    from conf import BASE_DIR, _load_proxy_url
 
-    # 代理
-    proxy_url = os.environ.get('HTTPS_PROXY') or os.environ.get('HTTP_PROXY') or 'http://127.0.0.1:7897'
+    # 代理：海外平台需要代理才能连接（每次动态读取，支持前端即时修改）
+    proxy_url = _load_proxy_url()
 
     print(f"[YOUTUBE DEBUG] Launching browser... proxy={proxy_url}")
 
@@ -76,8 +77,7 @@ async def youtube_cookie_gen(id, status_queue):
                 playwright,
                 user_data_dir=tmp_dir,
                 headless=False,
-                proxy={"server": proxy_url},
-                extra_args=_args,
+                proxy={"server": proxy_url} if proxy_url else None,
             )
             page = context.pages[0] if context.pages else await context.new_page()
             print(f"[YOUTUBE DEBUG] Navigating to accounts.google.com...")
@@ -336,7 +336,7 @@ class YouTubeVideo(YouTubeBaseUploader):
         log_dir = Path(__file__).parent.parent.parent.parent / "data" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
 
-        browser = await create_browser(playwright, headless=self.headless)
+        browser = await create_browser(playwright, headless=self.headless, proxy={"server": _load_proxy_url()} if _load_proxy_url() else None)
         context = await create_context(browser, storage_state=self.account_file)
 
         upload_success = False

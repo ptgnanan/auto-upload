@@ -9,7 +9,7 @@ from patchright.async_api import Playwright, async_playwright
 import os
 import asyncio
 
-from conf import BASE_DIR, LOCAL_CHROME_HEADLESS
+from conf import BASE_DIR, LOCAL_CHROME_HEADLESS, _load_proxy_url
 from uploader.tk_uploader.tk_config import Tk_Locator
 from myUtils.browser import create_browser, create_context
 from utils.files_times import get_absolute_path
@@ -79,12 +79,12 @@ async def tiktok_setup(account_file, handle=False):
 async def get_tiktok_cookie(account_file):
     """TikTok登录 - 检测登录完成并自动保存 cookie"""
     async with async_playwright() as playwright:
-        _proxy = {"server": "http://127.0.0.1:7897"}
+        _proxy = _load_proxy_url()
         browser = await create_browser(
             playwright,
             headless=False,
-            proxy=_proxy,
-            extra_args=['--lang en-GB', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+            proxy={"server": _proxy} if _proxy else None,
+            extra_args=['--lang en-GB'],
         )
         context = await create_context(browser)
         page = await context.new_page()

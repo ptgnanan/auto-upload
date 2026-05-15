@@ -9,6 +9,8 @@ from queue import Queue
 from flask_cors import CORS
 from myUtils.auth import check_cookie
 from flask import Flask, request, jsonify, Response, render_template, send_from_directory
+import json as json_module
+
 from conf import BASE_DIR
 from myUtils.login import get_tencent_cookie, douyin_cookie_gen, get_ks_cookie, xiaohongshu_cookie_gen, sync_account_profile, bilibili_cookie_gen
 from myUtils.postVideo import post_video_tencent, post_video_DouYin, post_video_ks, post_video_xhs, post_video_bilibili, post_video_baijiahao, post_video_tiktok, post_video_youtube
@@ -225,35 +227,33 @@ def getAccounts():
 
 
 @app.route("/getValidAccounts",methods=['GET'])
-async def getValidAccounts():
+def getValidAccounts():
     with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
         cursor = conn.cursor()
-        cursor.execute('''
-        SELECT * FROM user_info''')
+        cursor.execute('''SELECT * FROM user_info''')
         rows = cursor.fetchall()
         rows_list = [list(row) for row in rows]
         print("\n📋 当前数据表内容：")
         for row in rows:
             print(row)
         for row in rows_list:
-            flag = await check_cookie(row[1],row[2])
+            flag = asyncio.run(check_cookie(row[1], row[2]))
             if not flag:
                 row[4] = 0
                 cursor.execute('''
-                UPDATE user_info 
-                SET status = ? 
+                UPDATE user_info
+                SET status = ?
                 WHERE id = ?
-                ''', (0,row[0]))
+                ''', (0, row[0]))
                 conn.commit()
                 print("✅ 用户状态已更新")
         for row in rows:
             print(row)
-        return jsonify(
-                        {
-                            "code": 200,
-                            "msg": None,
-                            "data": rows_list
-                        }),200
+        return jsonify({
+            "code": 200,
+            "msg": None,
+            "data": rows_list
+        }), 200
 
 @app.route('/deleteFile', methods=['GET'])
 def delete_file():
@@ -832,6 +832,33 @@ def download_cookie():
             "data": None
         }), 500
 
+
+# ── Settings API ──
+
+SETTINGS_FILE = Path(BASE_DIR) / "settings.json"
+
+def _read_settings():
+    if SETTINGS_FILE.exists():
+        with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+            return json_module.load(f)
+    return {}
+
+def _write_settings(data):
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+        json_module.dump(data, f, ensure_ascii=False, indent=2)
+
+@app.route('/api/v2/settings', methods=['GET'])
+def api_get_settings():
+    return jsonify({"code": 200, "msg": None, "data": _read_settings()})
+
+@app.route('/api/v2/settings', methods=['PUT'])
+def api_update_settings():
+    data = request.get_json(force=True)
+    current = _read_settings()
+    current.update(data)
+    _write_settings(current)
+    return jsonify({"code": 200, "msg": "保存成功", "data": current})
 
 # 包装函数：在线程中运行异步函数
 def run_async_function(type,id,status_queue):

@@ -8,13 +8,9 @@
     <div class="account-container">
       <div class="account-toolbar">
         <div class="toolbar-left">
-          <div class="platform-filters">
-            <div v-for="f in filterOptions" :key="f.value"
-              :class="['filter-chip', { active: activeTab === f.value }]"
-              @click="activeTab = f.value">
-              {{ f.label }}
-            </div>
-          </div>
+          <el-select v-model="activeTab" style="width: 160px">
+            <el-option v-for="f in filterOptions" :key="f.value" :label="f.label" :value="f.value" />
+          </el-select>
           <el-input
             v-model="searchKeyword"
             placeholder="搜索名称或账号"
@@ -107,16 +103,20 @@
     >
       <el-form :model="accountForm" label-width="80px" :rules="rules" ref="accountFormRef">
         <el-form-item label="平台" prop="platform">
-          <div class="platform-picker">
-            <div v-for="p in platformOptions" :key="p.value"
-              :class="['platform-card', { active: accountForm.platform === p.label, disabled: dialogType === 'edit' || sseConnecting }]"
-              @click="selectPlatform(p.label)">
-              <div class="platform-icon" :style="{ background: p.bg }">
-                <img :src="p.logo" :alt="p.label" class="platform-logo-img" />
-              </div>
-              <div class="platform-name">{{ p.label }}</div>
-            </div>
-          </div>
+          <el-select
+            v-model="accountForm.platform"
+            placeholder="请选择平台"
+            :disabled="dialogType === 'edit' || sseConnecting"
+            style="width: 100%"
+            @change="onPlatformSelect"
+          >
+            <el-option
+              v-for="p in platformOptions"
+              :key="p.value"
+              :label="p.label"
+              :value="p.label"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item v-if="dialogType === 'edit'" label="名称" prop="name">
           <el-input
@@ -277,9 +277,7 @@ const sseConnecting = ref(false)
 const qrCodeData = ref('')
 const loginStatus = ref('')
 
-const selectPlatform = (label) => {
-  if (dialogType.value === 'edit' || sseConnecting.value) return
-  accountForm.platform = label
+const onPlatformSelect = () => {
   accountFormRef.value?.validateField('platform')
 }
 
@@ -450,7 +448,7 @@ const connectSSE = (platform) => {
             sseConnecting.value = false
             ElMessage.success(dialogType.value === 'edit' ? '重新登录成功' : '账号添加成功')
             ElMessage({ type: 'info', message: '正在同步账号信息...', duration: 0 })
-            fetchAccounts().then(() => { ElMessage.closeAll(); ElMessage.success('账号信息已更新') })
+            fetchAccountsQuick().then(() => { ElMessage.closeAll(); ElMessage.success('账号信息已更新') })
           }, 1000)
         }, 1000)
         return
@@ -485,7 +483,7 @@ const connectSSE = (platform) => {
           sseConnecting.value = false
           ElMessage.success(dialogType.value === 'edit' ? '重新登录成功' : '账号添加成功')
           ElMessage({ type: 'info', message: '正在同步账号信息...', duration: 0 })
-          fetchAccounts().then(() => { ElMessage.closeAll(); ElMessage.success('账号信息已更新') })
+          fetchAccountsQuick().then(() => { ElMessage.closeAll(); ElMessage.success('账号信息已更新') })
         }, 1000)
       }, 1000)
     }
@@ -512,7 +510,7 @@ const submitAccountForm = () => {
             accountStore.updateAccount(accountForm.id, { id: accountForm.id, name: accountForm.name, platform: accountForm.platform, status: accountForm.status })
             ElMessage.success('更新成功')
             dialogVisible.value = false
-            fetchAccounts()
+            fetchAccountsQuick()
           } else {
             ElMessage.error(res.msg || '更新账号失败')
           }
@@ -580,38 +578,6 @@ onBeforeUnmount(() => { closeSSEConnection() })
         display: flex;
         gap: 10px;
         flex-shrink: 0;
-      }
-    }
-
-    // Platform filter chips
-    .platform-filters {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-
-      .filter-chip {
-        padding: 6px 16px;
-        border-radius: $radius-base;
-        border: 1px solid $border;
-        background: transparent;
-        color: $text-secondary;
-        font-size: 13px;
-        cursor: pointer;
-        transition: $transition-base;
-        white-space: nowrap;
-        user-select: none;
-
-        &:hover {
-          border-color: $border-active;
-          color: $text-primary;
-        }
-
-        &.active {
-          background: $gradient-brand-subtle;
-          border-color: $border-active;
-          color: $text-primary;
-          font-weight: 500;
-        }
       }
     }
 
@@ -770,66 +736,6 @@ onBeforeUnmount(() => { closeSSEConnection() })
     }
   }
 
-  // Dialog — Platform picker
-  .platform-picker {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-
-    .platform-card {
-      width: 100px;
-      height: 80px;
-      border-radius: $radius-card;
-      border: 1px solid $border;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: $transition-base;
-      background: transparent;
-
-      &:hover {
-        border-color: $border-active;
-      }
-
-      &.active {
-        border-color: $border-active;
-        background: $gradient-brand-subtle;
-      }
-
-      &.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .platform-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        .platform-logo-img {
-          width: 20px;
-          height: 20px;
-          object-fit: contain;
-        }
-      }
-
-      .platform-name {
-        font-size: 12px;
-        color: $text-secondary;
-        font-weight: 500;
-      }
-
-      &.active .platform-name {
-        color: $text-primary;
-      }
-    }
-  }
 
   // QR code area
   .qrcode-container {
