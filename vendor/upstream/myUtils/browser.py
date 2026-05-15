@@ -1,19 +1,16 @@
 # vendor/upstream/myUtils/browser.py
 """统一浏览器启动入口 — 基于 Patchright 反检测机制
 
-双层防检测策略：
-1. Patchright：CDP 驱动层反检测（Runtime.enable leak、Console leak、Command Flags）
-2. stealth.min.js：JS 层指纹修补（navigator.webdriver、chrome 对象等）
+Patchright 内置反检测机制：
+- CDP 层：Runtime.enable leak、Console leak、Command Flags 等
+- 注意：stealth.min.js 与 Patchright 的 init script 机制冲突，不能叠加使用
+  （会导致 net::ERR_CONNECTION_CLOSED）
 
 浏览器优先级：系统 Chrome/Chromium > Patchright 自带 Chromium。
 """
-from pathlib import Path
-
 from patchright.async_api import Playwright, Browser, BrowserContext
 from patchright.sync_api import Playwright as SyncPlaywright, Browser as SyncBrowser, BrowserContext as SyncBrowserContext
 from conf import LOCAL_CHROME_PATH, LOCAL_CHROME_HEADLESS, LOGIN_HEADLESS
-
-_STEALTH_JS_PATH = Path(__file__).parent.parent / "utils" / "stealth.min.js"
 
 
 def _build_launch_args(extra_args: list | None = None) -> list:
@@ -79,7 +76,8 @@ async def create_context(
     """
     统一的上下文创建入口。
 
-    自动注入 stealth.min.js 作为 JS 层额外防检测（与 Patchright CDP 层互补）。
+    注意：不注入 stealth.js，因为 stealth.js 与 Patchright 的 Routes 注入机制冲突，
+    会导致 net::ERR_CONNECTION_CLOSED。Patchright 自身已提供充分的反检测能力。
 
     Args:
         browser: Browser 实例
@@ -94,11 +92,7 @@ async def create_context(
         opts['user_agent'] = user_agent
     if viewport:
         opts['viewport'] = viewport
-    context = await browser.new_context(**opts)
-    # 注入 stealth.js 作为 JS 层额外防检测
-    if _STEALTH_JS_PATH.exists():
-        await context.add_init_script(path=str(_STEALTH_JS_PATH))
-    return context
+    return await browser.new_context(**opts)
 
 
 async def create_persistent_context(
@@ -110,8 +104,6 @@ async def create_persistent_context(
 ) -> BrowserContext:
     """
     创建持久化上下文（用于需要代理+有头模式的场景，如 YouTube 登录）。
-
-    自动注入 stealth.min.js。
 
     Args:
         playwright: patchright Playwright 实例
@@ -128,10 +120,7 @@ async def create_persistent_context(
     opts.update(_get_channel_or_path())
     if proxy:
         opts['proxy'] = proxy
-    context = await playwright.chromium.launch_persistent_context(**opts)
-    if _STEALTH_JS_PATH.exists():
-        await context.add_init_script(path=str(_STEALTH_JS_PATH))
-    return context
+    return await playwright.chromium.launch_persistent_context(**opts)
 
 
 # ── Sync API（用于 xhs_uploader/sign_local、sau_backend 等同步场景）──
@@ -154,11 +143,8 @@ def create_context_sync(
     browser: SyncBrowser,
     storage_state: str | None = None,
 ) -> SyncBrowserContext:
-    """同步版本的上下文创建入口（自动注入 stealth.js）。"""
+    """同步版本的上下文创建入口。"""
     opts = {}
     if storage_state:
         opts['storage_state'] = storage_state
-    context = browser.new_context(**opts)
-    if _STEALTH_JS_PATH.exists():
-        context.add_init_script(path=str(_STEALTH_JS_PATH))
-    return context
+    return browser.new_context(**opts)
