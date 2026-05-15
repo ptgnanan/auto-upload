@@ -156,3 +156,93 @@ def post_video_bilibili(title, files, tags, account_file, category=None,
                 headless=False,
             )
             asyncio.run(app.main(), debug=False)
+
+
+def post_video_baijiahao(title, files, tags, account_file,
+                         enableTimer=False, videos_per_day=1, daily_times=None,
+                         start_days=0, thumbnail_path=None, desc='', schedule_time_str=''):
+    """百家号视频上传"""
+    from uploader.baijiahao_uploader.main import BaiJiaHaoVideo
+
+    account_file = [Path(BASE_DIR / "cookiesFile" / file) for file in account_file]
+    files = [Path(BASE_DIR / "videoFile" / file) for file in files]
+    if thumbnail_path:
+        thumbnail_path = str(Path(BASE_DIR / "videoFile" / thumbnail_path))
+    publish_datetimes = _parse_schedule_time(schedule_time_str, len(files), enableTimer, videos_per_day, daily_times, start_days)
+
+    for index, file in enumerate(files):
+        for cookie in account_file:
+            print(f"视频文件名：{file}")
+            print(f"标题：{title}")
+            print(f"描述：{desc}")
+            print(f"Hashtag：{tags}")
+            app = BaiJiaHaoVideo(
+                title=title,
+                file_path=str(file),
+                tags=tags or [],
+                publish_date=publish_datetimes[index] if isinstance(publish_datetimes, list) else publish_datetimes,
+                account_file=str(cookie),
+                desc=desc or None,
+                thumbnail_path=thumbnail_path,
+                headless=False,
+            )
+            asyncio.run(app.main(), debug=False)
+
+
+def post_video_tiktok(title, files, tags, account_file,
+                      enableTimer=False, videos_per_day=1, daily_times=None,
+                      start_days=0, desc='', schedule_time_str=''):
+    """TikTok海外版视频上传"""
+    from uploader.tk_uploader.main import TiktokVideo
+
+    account_file = [Path(BASE_DIR / "cookiesFile" / file) for file in account_file]
+    files = [Path(BASE_DIR / "videoFile" / file) for file in files]
+    publish_datetimes = _parse_schedule_time(schedule_time_str, len(files), enableTimer, videos_per_day, daily_times, start_days)
+
+    for index, file in enumerate(files):
+        for cookie in account_file:
+            print(f"视频文件名：{file}")
+            print(f"标题：{title}")
+            print(f"描述：{desc}")
+            print(f"Hashtag：{tags}")
+            app = TiktokVideo(
+                title=title,
+                file_path=str(file),
+                tags=tags or [],
+                publish_date=publish_datetimes[index] if isinstance(publish_datetimes, list) else publish_datetimes,
+                account_file=str(cookie),
+                desc=desc or None,
+                headless=False,
+            )
+            asyncio.run(app.main(), debug=False)
+
+
+def post_video_youtube(title, files, tags, account_file,
+                       enableTimer=False, videos_per_day=1, daily_times=None,
+                       start_days=0, thumbnail_path=None, desc='', schedule_time_str=''):
+    """YouTube视频上传"""
+    from uploader.youtube_uploader.main import YouTubeVideo
+
+    account_file = [Path(BASE_DIR / "cookiesFile" / file) for file in account_file]
+    files = [Path(BASE_DIR / "videoFile" / file) for file in files]
+    if thumbnail_path:
+        thumbnail_path = str(Path(BASE_DIR / "videoFile" / thumbnail_path))
+    publish_datetimes = _parse_schedule_time(schedule_time_str, len(files), enableTimer, videos_per_day, daily_times, start_days)
+
+    for index, file in enumerate(files):
+        for cookie in account_file:
+            print(f"视频文件名：{file}")
+            print(f"标题：{title}")
+            print(f"描述：{desc}")
+            print(f"Hashtag：{tags}")
+            app = YouTubeVideo(
+                title=title,
+                file_path=str(file),
+                tags=tags or [],
+                publish_date=publish_datetimes[index] if isinstance(publish_datetimes, list) else publish_datetimes,
+                account_file=str(cookie),
+                desc=desc or None,
+                thumbnail_path=thumbnail_path,
+                headless=False,
+            )
+            asyncio.run(app.main(), debug=False)
