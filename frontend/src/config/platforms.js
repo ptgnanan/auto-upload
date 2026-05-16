@@ -191,8 +191,24 @@ export const PLATFORMS = {
     settingsFields: [
       { key: 'aiContent', label: 'AI生成内容', type: 'switch' },
       { key: 'isOriginal', label: '原创声明', type: 'radio', options: [{ label: '原创', value: true }, { label: '非原创', value: false }] },
+      { key: 'creationDeclaration', label: '必选声明', type: 'select', placeholder: '选择必选声明', options: [
+        { label: '无需声明', value: '无需声明' },
+        { label: '含AI生成内容', value: '含AI生成内容' },
+        { label: '内容为转载', value: '内容为转载' },
+        { label: '含虚构演绎内容', value: '含虚构演绎内容' },
+        { label: '内容含营销信息', value: '内容含营销信息' },
+        { label: '个人观点，仅供参考', value: '个人观点，仅供参考' },
+      ] },
+      { key: 'supplementaryDeclaration', label: '补充声明', type: 'select', placeholder: '选择补充声明（可选）', options: [
+        { label: '不选择', value: '' },
+        { label: '内容可能引人不适', value: '内容可能引人不适' },
+        { label: '内容含有高危险行为', value: '内容含有高危险行为' },
+        { label: '请理性适度消费', value: '请理性适度消费' },
+        { label: '未成年人请在监护人指导下浏览', value: '未成年人请在监护人指导下浏览' },
+      ] },
+      { key: 'scheduleTime', label: '定时发布', type: 'datetime', placeholder: '选择时间' },
     ],
-    defaultSettings: { title: '', description: '', aiContent: false, isOriginal: false },
+    defaultSettings: { title: '', description: '', aiContent: false, isOriginal: false, creationDeclaration: '', supplementaryDeclaration: '', scheduleTime: '' },
   },
   TIKTOK: {
     id: 7,

@@ -160,14 +160,19 @@ def post_video_bilibili(title, files, tags, account_file, category=None,
 
 def post_video_baijiahao(title, files, tags, account_file,
                          enableTimer=False, videos_per_day=1, daily_times=None,
-                         start_days=0, thumbnail_path=None, desc='', schedule_time_str=''):
+                         start_days=0, thumbnail_landscape_path=None, thumbnail_portrait_path=None,
+                         desc='', schedule_time_str='',
+                         creation_declaration='', supplementary_declaration='',
+                         ai_content=False):
     """百家号视频上传"""
     from uploader.baijiahao_uploader.main import BaiJiaHaoVideo
 
     account_file = [Path(BASE_DIR / "cookiesFile" / file) for file in account_file]
     files = [Path(BASE_DIR / "videoFile" / file) for file in files]
-    if thumbnail_path:
-        thumbnail_path = str(Path(BASE_DIR / "videoFile" / thumbnail_path))
+    if thumbnail_landscape_path:
+        thumbnail_landscape_path = str(Path(BASE_DIR / "videoFile" / thumbnail_landscape_path))
+    if thumbnail_portrait_path:
+        thumbnail_portrait_path = str(Path(BASE_DIR / "videoFile" / thumbnail_portrait_path))
     publish_datetimes = _parse_schedule_time(schedule_time_str, len(files), enableTimer, videos_per_day, daily_times, start_days)
 
     for index, file in enumerate(files):
@@ -183,7 +188,11 @@ def post_video_baijiahao(title, files, tags, account_file,
                 publish_date=publish_datetimes[index] if isinstance(publish_datetimes, list) else publish_datetimes,
                 account_file=str(cookie),
                 desc=desc or None,
-                thumbnail_path=thumbnail_path,
+                thumbnail_landscape_path=thumbnail_landscape_path,
+                thumbnail_portrait_path=thumbnail_portrait_path,
+                creation_declaration=creation_declaration,
+                supplementary_declaration=supplementary_declaration,
+                ai_content=ai_content,
                 headless=False,
             )
             asyncio.run(app.main(), debug=False)

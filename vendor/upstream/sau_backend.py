@@ -610,8 +610,11 @@ def postVideo():
                 post_video_bilibili(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
                           start_days, desc=desc, thumbnailLandscape=thumbnail_landscape_path, schedule_time_str=schedule_time_str, ai_content=ai_content, creation_declaration=creation_declaration)
             case 6:
-                post_video_baijiahao(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
-                          start_days, schedule_time_str=schedule_time_str)
+                post_video_baijiahao(title, file_list, tags, account_list, enableTimer, videos_per_day, daily_times,
+                          start_days, thumbnail_landscape_path=thumbnail_landscape_path, thumbnail_portrait_path=thumbnail_portrait_path,
+                          desc=desc, schedule_time_str=schedule_time_str,
+                          creation_declaration=creation_declaration, supplementary_declaration=data.get('supplementaryDeclaration', ''),
+                          ai_content=ai_content)
             case 7:
                 post_video_tiktok(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
                           start_days, schedule_time_str=schedule_time_str)
@@ -699,6 +702,7 @@ def postVideoBatch():
         ai_content = data.get('aiContent', '')
         thumbnail_landscape_path = data.get('thumbnailLandscape', '')
         thumbnail_portrait_path = data.get('thumbnailPortrait', '')
+        creation_declaration = data.get('creationDeclaration', '')
 
         videos_per_day = data.get('videosPerDay')
         daily_times = data.get('dailyTimes')
@@ -723,8 +727,11 @@ def postVideoBatch():
                 post_video_bilibili(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
                           start_days, thumbnailLandscape=thumbnail_landscape_path, thumbnailPortrait=thumbnail_portrait_path, schedule_time_str=schedule_time_str)
             case 6:
-                post_video_baijiahao(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
-                          start_days, schedule_time_str=schedule_time_str)
+                post_video_baijiahao(title, file_list, tags, account_list, enableTimer, videos_per_day, daily_times,
+                          start_days, thumbnail_landscape_path=thumbnail_landscape_path, thumbnail_portrait_path=thumbnail_portrait_path,
+                          desc=desc, schedule_time_str=schedule_time_str,
+                          creation_declaration=creation_declaration, supplementary_declaration=data.get('supplementaryDeclaration', ''),
+                          ai_content=ai_content)
             case 7:
                 post_video_tiktok(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
                           start_days, schedule_time_str=schedule_time_str)
