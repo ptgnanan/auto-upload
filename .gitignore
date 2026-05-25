@@ -32,3 +32,4 @@ frontend-dist/
 python/
 .gstack/
 docs/superpowers/
+.codex-logs/

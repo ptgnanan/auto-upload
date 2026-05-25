@@ -122,6 +122,7 @@ import { Refresh, List } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { taskApi } from '@/api/v2'
 import { platformCssMap } from '@/config/platforms'
+import { resolveApiUrl } from '@/utils/api-runtime'
 
 const tasks = ref([])
 const loading = ref(false)
@@ -165,8 +166,7 @@ const fetchQueueStatus = async () => {
 // SSE connection for real-time updates
 let eventSource = null
 const connectSSE = () => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'
-  eventSource = new EventSource(`${baseUrl}/api/v2/tasks/stream`)
+  eventSource = new EventSource(resolveApiUrl('/api/v2/tasks/stream'))
   eventSource.onmessage = (e) => {
     try {
       const data = JSON.parse(e.data)

@@ -4,6 +4,7 @@ import sys
 import threading
 from pathlib import Path
 from queue import Queue
+from typing import Any
 
 print(f"[Startup] Python {sys.version} starting...")
 print(f"[Startup] Script: {__file__}")
@@ -56,6 +57,16 @@ from impl.settings import get_engine_mode
 from impl.registry import get_platform
 
 
+def _safe_debug_print(*args: Any, **kwargs: Any) -> None:
+    """Best-effort debug output that never breaks request handling."""
+    try:
+        print(*args, **kwargs)
+    except (BrokenPipeError, OSError, ValueError):
+        # Some launchers may close stdout/stderr while the server keeps running.
+        # Request handling must continue even if debug output cannot be written.
+        return
+
+
 def _get_account_record(account_id):
     """根据 id 从 user_info 查账号记录，返回 dict 或 None"""
     with sqlite3.connect(str(DB_PATH)) as conn:
@@ -72,6 +83,32 @@ _original_center = app.view_functions.get('open_creator_center')
 _original_login = app.view_functions.get('login')
 _original_post = app.view_functions.get('postVideo')
 _original_batch = app.view_functions.get('postVideoBatch')
+_original_get_accounts = app.view_functions.get('getAccounts')
+_original_get_valid_accounts = app.view_functions.get('getValidAccounts')
+
+
+def _serialize_account_record(record):
+    return {
+        "id": record["id"],
+        "type": record["type"],
+        "filePath": record["filePath"],
+        "userName": record["userName"],
+        "status": record["status"],
+        "avatar": record.get("avatar") or "",
+    }
+
+
+def _fetch_account_records():
+    with sqlite3.connect(str(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT id, type, filePath, userName, status, avatar
+            FROM user_info
+            ORDER BY id ASC
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]
 
 
 def _override_check_account():
@@ -177,6 +214,34 @@ def _override_login():
     return response
 
 
+def _override_get_accounts():
+    records = [_serialize_account_record(record) for record in _fetch_account_records()]
+    return jsonify({"code": 200, "msg": None, "data": records})
+
+
+def _override_get_valid_accounts():
+    records = _fetch_account_records()
+    updates = []
+
+    for record in records:
+        platform = get_platform(record['type'])
+        if not platform:
+            continue
+
+        valid = asyncio.run(platform.check_cookie(record['filePath']))
+        new_status = 1 if valid else 0
+        if record['status'] != new_status:
+            record['status'] = new_status
+            updates.append((new_status, record['id']))
+
+    if updates:
+        with sqlite3.connect(str(DB_PATH)) as conn:
+            conn.executemany('UPDATE user_info SET status = ? WHERE id = ?', updates)
+            conn.commit()
+
+    return jsonify({"code": 200, "msg": None, "data": [_serialize_account_record(record) for record in records]})
+
+
 def _override_post_video():
     data = request.get_json()
     if not data:
@@ -258,8 +323,8 @@ def _override_post_video_batch():
 def _make_dispatcher(original_fn, override_fn):
     def dispatcher(*args, **kwargs):
         mode = get_engine_mode()
-        print(f"[ENGINE] mode={mode} path={request.path}", flush=True)
-        if mode == 'new':
+        _safe_debug_print(f"[ENGINE] mode={mode} path={request.path}", flush=True)
+        if mode == 'new' or request.path in ('/getAccounts', '/getValidAccounts'):
             resp = override_fn(*args, **kwargs)
         else:
             resp = original_fn(*args, **kwargs) if original_fn else (jsonify({"code": 500, "msg": "旧版引擎不可用"}), 500)
@@ -282,6 +347,8 @@ app.view_functions['open_creator_center'] = _make_dispatcher(_original_center, _
 app.view_functions['login'] = _make_dispatcher(_original_login, _override_login)
 app.view_functions['postVideo'] = _make_dispatcher(_original_post, _override_post_video)
 app.view_functions['postVideoBatch'] = _make_dispatcher(_original_batch, _override_post_video_batch)
+app.view_functions['getAccounts'] = _make_dispatcher(_original_get_accounts, _override_get_accounts)
+app.view_functions['getValidAccounts'] = _make_dispatcher(_original_get_valid_accounts, _override_get_valid_accounts)
 
 
 def _get_db_path():

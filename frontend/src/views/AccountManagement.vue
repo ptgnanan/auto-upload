@@ -195,6 +195,7 @@ import { accountApi } from '@/api/account'
 import { useAccountStore } from '@/stores/account'
 import { useAppStore } from '@/stores/app'
 import { http } from '@/utils/request'
+import { resolveApiUrl } from '@/utils/api-runtime'
 import { platformList, platformNameToId, platformCssMap, getPlatformByName, PLATFORMS } from '@/config/platforms'
 
 const accountStore = useAccountStore()
@@ -397,8 +398,7 @@ const handleDelete = (row) => {
 }
 
 const handleDownloadCookie = (row) => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'
-  const downloadUrl = `${baseUrl}/downloadCookie?filePath=${encodeURIComponent(row.filePath)}`
+  const downloadUrl = resolveApiUrl(`/downloadCookie?filePath=${encodeURIComponent(row.filePath)}`)
   const link = document.createElement('a')
   link.href = downloadUrl
   link.download = `${row.name}_cookie.json`
@@ -507,10 +507,9 @@ const connectSSE = (platform) => {
   loginStatus.value = ''
 
   const type = platformNameToId[platform] ? String(platformNameToId[platform]) : '1'
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'
   // 使用 UUID 作为临时标识，不再需要用户输入名称
   const tempId = crypto.randomUUID()
-  const url = `${baseUrl}/login?type=${type}&id=${encodeURIComponent(tempId)}`
+  const url = resolveApiUrl(`/login?type=${type}&id=${encodeURIComponent(tempId)}`)
 
   eventSource = new EventSource(url)
 

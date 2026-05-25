@@ -753,12 +753,13 @@ import { useAppStore } from '@/stores/app'
 import { materialApi } from '@/api/material'
 import { accountApi } from '@/api/account'
 import { http } from '@/utils/request'
+import { resolveApiUrl } from '@/utils/api-runtime'
 import { platformList, getPlatformByKey, platformKeyToId } from '@/config/platforms'
 
 // ========== Stores & Config ==========
 const accountStore = useAccountStore()
 const appStore = useAppStore()
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'
+const apiBaseUrl = resolveApiUrl('')
 const authHeaders = computed(() => ({ 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` }))
 
 // ========== Left Sidebar State ==========
