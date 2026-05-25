@@ -4,6 +4,17 @@
     <h1 class="page-title">仪表盘</h1>
     <p class="page-subtitle">数据概览与快捷操作</p>
 
+    <div v-if="savedDraftInfo" class="draft-banner">
+      <div class="draft-banner-left">
+        <div class="draft-banner-title">检测到未完成草稿</div>
+        <div class="draft-banner-desc">
+          <span>上次保存：{{ savedDraftInfo.savedAtText }}</span>
+          <span v-if="savedDraftInfo.accountCount > 0">已选账号：{{ savedDraftInfo.accountCount }} 个</span>
+        </div>
+      </div>
+      <button class="draft-banner-btn" @click="openSavedDraft">继续编辑草稿</button>
+    </div>
+
     <!-- 4 Stat cards row -->
     <div class="stat-cards">
       <!-- 账号总数 (purple) -->
@@ -101,7 +112,14 @@
           <el-icon><Upload /></el-icon>
         </div>
         <div class="action-title">快速发布</div>
-        <div class="action-desc">发布内容到各平台</div>
+        <div class="action-desc">新建发布内容</div>
+      </div>
+      <div v-if="savedDraftInfo" class="action-card" @click="openSavedDraft">
+        <div class="action-icon action-icon-amber">
+          <el-icon><Timer /></el-icon>
+        </div>
+        <div class="action-title">继续草稿</div>
+        <div class="action-desc">恢复上次保存的发布草稿</div>
       </div>
       <div class="action-card" @click="navigateTo('/material-management')">
         <div class="action-icon action-icon-blue">
@@ -197,6 +215,33 @@ const accountStore = useAccountStore()
 const appStore = useAppStore()
 const loading = ref(false)
 const isChecking = ref(false)
+const savedDraftInfo = ref(null)
+
+function formatDraftSavedAt(value) {
+  if (!value) return '未知'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '未知'
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+function syncSavedDraftInfo() {
+  const rawDraft = localStorage.getItem('publishDraft')
+  if (!rawDraft) {
+    savedDraftInfo.value = null
+    return
+  }
+
+  try {
+    const draftData = JSON.parse(rawDraft)
+    savedDraftInfo.value = {
+      savedAtText: formatDraftSavedAt(draftData.savedAt),
+      accountCount: Array.isArray(draftData.publishAccountIds) ? draftData.publishAccountIds.length : 0,
+    }
+  } catch (error) {
+    console.error('读取草稿信息失败:', error)
+    savedDraftInfo.value = null
+  }
+}
 
 // 批量检查账号
 const handleBatchCheck = async () => {
@@ -278,17 +323,12 @@ const getFileTypeTag = (filename) => {
   return { '视频': 'success', '图片': 'warning', '其他': 'info' }[type] || 'info'
 }
 
-function hasSavedDraft() {
-  return !!localStorage.getItem('publishDraft')
+function openPublishCenter() {
+  router.push('/publish-center')
 }
 
-function openPublishCenter() {
-  if (hasSavedDraft()) {
-    router.push({ path: '/publish-center', query: { draft: 'latest' } })
-    return
-  }
-
-  router.push('/publish-center')
+function openSavedDraft() {
+  router.push({ path: '/publish-center', query: { draft: 'latest' } })
 }
 
 // 导航到指定路由
@@ -320,6 +360,7 @@ const fetchDashboardData = async () => {
 }
 
 onMounted(() => {
+  syncSavedDraftInfo()
   fetchDashboardData()
 })
 </script>

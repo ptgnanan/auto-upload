@@ -759,7 +759,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick, watch, onMounted, onBeforeUnmount, onDeactivated } from 'vue'
+import { ref, reactive, computed, nextTick, watch, onMounted, onBeforeUnmount, onDeactivated, onActivated } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Upload, ArrowDown, ArrowRight, Picture, VideoCameraFilled, Check, Close, InfoFilled, Promotion, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -1112,6 +1112,7 @@ const isCancelled = ref(false)
 let batchDialogCloseTimer = null
 let cropDragMoveHandler = null
 let cropDragUpHandler = null
+let consumingDraftRoute = false
 
 const coverInputRef = ref(null)
 
@@ -1636,6 +1637,32 @@ function saveDraft() {
   }
 }
 
+async function consumeDraftRouteIfNeeded() {
+  if (route.query.draft !== 'latest' || consumingDraftRoute) return false
+
+  consumingDraftRoute = true
+
+  try {
+    await ensureAccountsLoaded()
+
+    const restored = restoreDraftFromStorage()
+    if (restored) {
+      ElMessage.success('已恢复上次草稿')
+    } else {
+      initializePlatformSelection()
+      selectDefaultPublishAccounts()
+      ElMessage.warning('未找到可恢复的草稿')
+    }
+
+    const nextQuery = { ...route.query }
+    delete nextQuery.draft
+    await router.replace({ path: route.path, query: nextQuery })
+    return true
+  } finally {
+    consumingDraftRoute = false
+  }
+}
+
 async function publishAll() {
   // Validate
   if (!commonConfig.videoLandscape && !commonConfig.videoPortrait) {
@@ -1811,20 +1838,16 @@ function formatSize(bytes) {
 onMounted(async () => {
   await ensureAccountsLoaded()
 
-  if (route.query.draft === 'latest') {
-    const restored = restoreDraftFromStorage()
-    if (restored) {
-      ElMessage.success('已恢复上次草稿')
-    }
-
-    const nextQuery = { ...route.query }
-    delete nextQuery.draft
-    router.replace({ path: route.path, query: nextQuery })
+  if (await consumeDraftRouteIfNeeded()) {
     return
   }
 
   initializePlatformSelection()
   selectDefaultPublishAccounts()
+})
+
+onActivated(async () => {
+  await consumeDraftRouteIfNeeded()
 })
 
 function cleanupTransientUiState() {
