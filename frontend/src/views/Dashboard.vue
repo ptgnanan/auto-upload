@@ -96,7 +96,7 @@
 
     <!-- Quick actions row -->
     <div class="quick-actions">
-      <div class="action-card" @click="navigateTo('/publish-center')">
+      <div class="action-card" @click="openPublishCenter">
         <div class="action-icon action-icon-purple">
           <el-icon><Upload /></el-icon>
         </div>
@@ -276,6 +276,19 @@ const getFileType = (filename) => {
 const getFileTypeTag = (filename) => {
   const type = getFileType(filename)
   return { '视频': 'success', '图片': 'warning', '其他': 'info' }[type] || 'info'
+}
+
+function hasSavedDraft() {
+  return !!localStorage.getItem('publishDraft')
+}
+
+function openPublishCenter() {
+  if (hasSavedDraft()) {
+    router.push({ path: '/publish-center', query: { draft: 'latest' } })
+    return
+  }
+
+  router.push('/publish-center')
 }
 
 // 导航到指定路由

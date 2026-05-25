@@ -745,7 +745,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick, watch } from 'vue'
+import { ref, reactive, computed, nextTick, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Upload, ArrowDown, ArrowRight, Picture, VideoCameraFilled, Check, Close, InfoFilled, Promotion, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useAccountStore } from '@/stores/account'
@@ -757,6 +758,8 @@ import { resolveApiUrl } from '@/utils/api-runtime'
 import { platformList, getPlatformByKey, platformKeyToId } from '@/config/platforms'
 
 // ========== Stores & Config ==========
+const route = useRoute()
+const router = useRouter()
 const accountStore = useAccountStore()
 const appStore = useAppStore()
 const apiBaseUrl = resolveApiUrl('')
@@ -819,16 +822,20 @@ const cropSelectionStyle = computed(() => ({
 }))
 
 // ========== Per-platform Config ==========
-const platformConfigs = reactive({
-  douyin: { title: '', description: '', productTitle: '', productLink: '', aiContent: '', isOriginal: false, scheduleTime: '', visibility: 'public', allowDownload: true, videoFormat: '' },
-  xiaohongshu: { title: '', description: '', collection: '', groupChat: '', location: '', aiContent: '', isOriginal: false, scheduleTime: '', videoFormat: '' },
-  kuaishou: { title: '', description: '', productTitle: '', productLink: '', aiContent: false, isOriginal: false, scheduleTime: '', videoFormat: '' },
-  bilibili: { title: '', description: '', zone: '', tags: '', topic: '', aiContent: '', creationDeclaration: '', isOriginal: false, scheduleTime: '', videoFormat: '' },
-  channels: { title: '', description: '', isDraft: false, location: '', aiContent: false, isOriginal: false, videoFormat: '' },
-  baijiahao: { title: '', description: '', aiContent: false, isOriginal: false, videoFormat: '' },
-  tiktok: { title: '', description: '', aiContent: false, isOriginal: false, scheduleTime: '', videoFormat: '' },
-  youtube: { title: '', description: '', audience: 'not_kids', alteredContent: false, scheduleTime: '', videoFormat: '' },
-})
+function createDefaultPlatformConfigs() {
+  return {
+    douyin: { title: '', description: '', productTitle: '', productLink: '', aiContent: '', isOriginal: false, scheduleTime: '', visibility: 'public', allowDownload: true, videoFormat: '' },
+    xiaohongshu: { title: '', description: '', collection: '', groupChat: '', location: '', aiContent: '', isOriginal: false, scheduleTime: '', videoFormat: '' },
+    kuaishou: { title: '', description: '', productTitle: '', productLink: '', aiContent: false, isOriginal: false, scheduleTime: '', videoFormat: '' },
+    bilibili: { title: '', description: '', zone: '', tags: '', topic: '', aiContent: '', creationDeclaration: '', isOriginal: false, scheduleTime: '', videoFormat: '' },
+    channels: { title: '', description: '', isDraft: false, location: '', aiContent: false, isOriginal: false, videoFormat: '' },
+    baijiahao: { title: '', description: '', aiContent: false, isOriginal: false, videoFormat: '' },
+    tiktok: { title: '', description: '', aiContent: false, isOriginal: false, scheduleTime: '', videoFormat: '' },
+    youtube: { title: '', description: '', audience: 'not_kids', alteredContent: false, scheduleTime: '', videoFormat: '' },
+  }
+}
+
+const platformConfigs = reactive(createDefaultPlatformConfigs())
 
 // ========== Account-level Overrides (账号级覆盖, 优先级高于渠道默认) ==========
 const accountOverrides = reactive({})
@@ -884,6 +891,30 @@ function hasAccountOverride(accountId) {
 
 // 表单数据（reactive 对象，支持 v-model 绑定到属性）
 const form = reactive({})
+let formSyncToken = 0
+
+function getPlatformFieldKeys(platformKey) {
+  return Object.keys(platformConfigs[platformKey] || {})
+}
+
+function syncFormFromSelection() {
+  const platformKey = selectedPlatform.value
+  if (!platformKey) return
+
+  const merged = getMergedSettings()
+  const fieldKeys = getPlatformFieldKeys(platformKey)
+  const token = ++formSyncToken
+
+  for (const key of fieldKeys) {
+    form[key] = merged[key]
+  }
+
+  nextTick(() => {
+    if (token === formSyncToken) {
+      formSyncToken = 0
+    }
+  })
+}
 
 // 获取当前合并后的设置
 function getMergedSettings() {
@@ -906,28 +937,20 @@ function getMergedSettings() {
 
 // 切换平台/账号时重新填充表单
 watch([selectedPlatform, selectedAccountId], () => {
-  const merged = getMergedSettings()
-  for (const key of Object.keys(merged)) {
-    form[key] = merged[key]
-  }
-  // 清理不存在的字段
-  for (const key of Object.keys(form)) {
-    if (!(key in merged)) {
-      delete form[key]
-    }
-  }
+  syncFormFromSelection()
 }, { immediate: true })
 
 // 表单变更时同步到 store
 watch(form, (newVal) => {
   const platformKey = selectedPlatform.value
-  if (!platformKey) return
+  if (!platformKey || formSyncToken !== 0) return
   const platform = platformConfigs[platformKey] || {}
+  const fieldKeys = getPlatformFieldKeys(platformKey)
 
   if (selectedAccountId.value) {
     // 账号级：计算与渠道默认的差异，存入 accountOverrides
     const diff = {}
-    for (const key of Object.keys(newVal)) {
+    for (const key of fieldKeys) {
       if (newVal[key] !== platform[key]) {
         diff[key] = newVal[key]
       }
@@ -939,7 +962,7 @@ watch(form, (newVal) => {
     }
   } else {
     // 渠道级：直接写入 platformConfigs
-    for (const key of Object.keys(newVal)) {
+    for (const key of fieldKeys) {
       platform[key] = newVal[key]
     }
   }
@@ -969,11 +992,24 @@ function syncBatchToAll() {
 
 const batchSyncExpanded = ref(false)
 
-// ========== Init: expand first group with accounts ==========
-const firstGroup = accountGroups.value.find(g => g.accounts.length > 0)
-if (firstGroup) {
-  expandedGroups.value.add(firstGroup.key)
-  selectedPlatform.value = firstGroup.key
+function initializePlatformSelection() {
+  const firstGroup = accountGroups.value.find(group => group.accounts.length > 0)
+
+  if (!selectedPlatform.value && firstGroup) {
+    selectedPlatform.value = firstGroup.key
+  }
+
+  if (selectedPlatform.value) {
+    expandedGroups.value.add(selectedPlatform.value)
+  }
+}
+
+function selectDefaultPublishAccounts() {
+  if (publishAccountIds.size > 0) return
+
+  accountStore.accounts.forEach(account => {
+    publishAccountIds.add(account.id)
+  })
 }
 
 // ========== Dialog State ==========
@@ -987,6 +1023,7 @@ const materialLibraryMode = ref('video') // 'video' | 'cover'
 const materialLibraryCoverTarget = ref('landscape') // 'landscape' | 'portrait'
 const materialLibraryVideoTarget = ref('landscape') // 'landscape' | 'portrait'
 const batchPublishDialogVisible = ref(false)
+const publishAccountIds = reactive(new Set())
 
 // Account dialog state
 const accountFilterPlatform = ref('')
@@ -1006,6 +1043,18 @@ watch(accountDialogVisible, async (visible) => {
     }
   }
 })
+
+watch(totalCount, () => {
+  initializePlatformSelection()
+
+  if (totalCount.value > 0 && publishAccountIds.size === 0) {
+    selectDefaultPublishAccounts()
+  }
+
+  if (selectedAccountId.value && !accountStore.accounts.some(account => account.id === selectedAccountId.value)) {
+    selectedAccountId.value = null
+  }
+}, { immediate: true })
 
 // 自动选择视频格式（当只有一种格式可用时）
 watch(effectiveVideoFormat, (format) => {
@@ -1060,9 +1109,6 @@ function toggleGroup(key) {
   selectedPlatform.value = key
   selectedAccountId.value = null
 }
-
-// Selected accounts for publishing (default empty)
-const publishAccountIds = reactive(new Set())
 
 function togglePublishAccount(account, group) {
   selectedPlatform.value = group.key
@@ -1441,6 +1487,104 @@ function confirmAccountSelection() {
   tempSelectedAccounts.value = []
 }
 
+async function ensureAccountsLoaded() {
+  if (accountStore.accounts.length > 0) return
+
+  try {
+    const res = await accountApi.getAccounts()
+    if (res.code === 200 && res.data) {
+      accountStore.setAccounts(res.data)
+    }
+  } catch (error) {
+    console.error('发布中心加载账号失败:', error)
+    ElMessage.error('发布中心加载账号失败')
+  }
+}
+
+function normalizeAccountId(value) {
+  if (value === null || value === undefined || value === '') return null
+  const numericValue = Number(value)
+  return Number.isNaN(numericValue) ? value : numericValue
+}
+
+function resetCommonConfig(snapshot = {}) {
+  commonConfig.videoLandscape = snapshot.videoLandscape || null
+  commonConfig.videoPortrait = snapshot.videoPortrait || null
+  commonConfig.coverLandscape = snapshot.coverLandscape || null
+  commonConfig.coverPortrait = snapshot.coverPortrait || null
+  commonConfig.topics.splice(0, commonConfig.topics.length, ...(Array.isArray(snapshot.topics) ? snapshot.topics : []))
+}
+
+function resetPlatformConfigs(snapshot = {}) {
+  const defaultConfigs = createDefaultPlatformConfigs()
+
+  Object.entries(defaultConfigs).forEach(([platformKey, defaultConfig]) => {
+    Object.assign(platformConfigs[platformKey], defaultConfig, snapshot[platformKey] || {})
+  })
+}
+
+function resetAccountOverrides(snapshot = {}) {
+  Object.keys(accountOverrides).forEach(accountId => {
+    delete accountOverrides[accountId]
+  })
+
+  Object.entries(snapshot).forEach(([accountId, override]) => {
+    accountOverrides[accountId] = { ...override }
+  })
+}
+
+function resetSelectedAccounts(accountIds = []) {
+  publishAccountIds.clear()
+
+  const validIds = new Set(accountStore.accounts.map(account => account.id))
+  accountIds
+    .map(normalizeAccountId)
+    .filter(accountId => accountId !== null && validIds.has(accountId))
+    .forEach(accountId => publishAccountIds.add(accountId))
+}
+
+function restoreDraftFromStorage() {
+  const rawDraft = localStorage.getItem('publishDraft')
+  if (!rawDraft) return false
+
+  try {
+    const draftData = JSON.parse(rawDraft)
+
+    resetCommonConfig(draftData.commonConfig || {})
+    resetPlatformConfigs(draftData.platformConfigs || {})
+    resetAccountOverrides(draftData.accountOverrides || {})
+
+    batchTitle.value = draftData.batchTitle || ''
+    batchDescription.value = draftData.batchDescription || ''
+
+    if (Array.isArray(draftData.publishAccountIds) && draftData.publishAccountIds.length > 0) {
+      resetSelectedAccounts(draftData.publishAccountIds)
+    } else {
+      selectDefaultPublishAccounts()
+    }
+
+    const restoredPlatformKey = draftData.selectedPlatform
+    selectedPlatform.value = restoredPlatformKey && getPlatformByKey(restoredPlatformKey)
+      ? restoredPlatformKey
+      : null
+
+    initializePlatformSelection()
+    expandedGroups.value = new Set(selectedPlatform.value ? [selectedPlatform.value] : [])
+
+    const restoredAccountId = normalizeAccountId(draftData.selectedAccountId)
+    selectedAccountId.value = restoredAccountId !== null && accountStore.accounts.some(account => account.id === restoredAccountId)
+      ? restoredAccountId
+      : null
+
+    syncFormFromSelection()
+    return true
+  } catch (error) {
+    console.error('草稿恢复失败:', error)
+    ElMessage.error('草稿恢复失败')
+    return false
+  }
+}
+
 // ========== Publish Methods ==========
 
 function saveDraft() {
@@ -1455,6 +1599,11 @@ function saveDraft() {
       },
       accountOverrides: JSON.parse(JSON.stringify(accountOverrides)),
       platformConfigs: JSON.parse(JSON.stringify(platformConfigs)),
+      publishAccountIds: Array.from(publishAccountIds),
+      selectedPlatform: selectedPlatform.value,
+      selectedAccountId: selectedAccountId.value,
+      batchTitle: batchTitle.value,
+      batchDescription: batchDescription.value,
       savedAt: new Date().toISOString(),
     }
     localStorage.setItem('publishDraft', JSON.stringify(draftData))
@@ -1635,6 +1784,25 @@ function formatSize(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB'
   return (bytes / 1024 / 1024).toFixed(2) + 'MB'
 }
+
+onMounted(async () => {
+  await ensureAccountsLoaded()
+
+  if (route.query.draft === 'latest') {
+    const restored = restoreDraftFromStorage()
+    if (restored) {
+      ElMessage.success('已恢复上次草稿')
+    }
+
+    const nextQuery = { ...route.query }
+    delete nextQuery.draft
+    router.replace({ path: route.path, query: nextQuery })
+    return
+  }
+
+  initializePlatformSelection()
+  selectDefaultPublishAccounts()
+})
 </script>
 
 <style lang="scss" scoped>
