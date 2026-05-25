@@ -430,6 +430,8 @@
       v-model="accountDialogVisible"
       title="选择账号"
       width="680px"
+      append-to-body
+      destroy-on-close
       :close-on-click-modal="false"
       class="account-select-dialog"
     >
@@ -518,6 +520,8 @@
       v-model="topicDialogVisible"
       title="添加话题"
       width="560px"
+      append-to-body
+      destroy-on-close
       class="topic-dialog"
     >
       <div class="topic-dialog-content">
@@ -555,6 +559,8 @@
       v-model="videoUploadDialogVisible"
       :title="'上传' + (videoUploadTarget === 'portrait' ? '竖版' : '横版') + '视频'"
       width="600px"
+      append-to-body
+      destroy-on-close
       class="video-upload-dialog"
     >
       <el-upload
@@ -588,6 +594,8 @@
       v-model="coverUploadDialogVisible"
       :title="'上传' + (coverUploadTarget === 'portrait' ? '竖版' : '横版') + '封面'"
       width="500px"
+      append-to-body
+      destroy-on-close
       class="cover-upload-dialog"
     >
       <el-upload
@@ -623,6 +631,8 @@
       v-model="cropDialogVisible"
       :title="'裁剪' + (cropTarget === 'portrait' ? '竖版' : '横版') + '封面'"
       width="600px"
+      append-to-body
+      destroy-on-close
       class="crop-dialog"
     >
       <div class="crop-container">
@@ -658,6 +668,8 @@
       v-model="materialLibraryVisible"
       :title="materialLibraryMode === 'cover' ? '选择封面图片' : '选择视频素材'"
       width="800px"
+      append-to-body
+      destroy-on-close
       class="material-library-dialog"
     >
       <div class="material-library-content">
@@ -696,6 +708,8 @@
       v-model="batchPublishDialogVisible"
       title="批量发布进度"
       width="500px"
+      append-to-body
+      destroy-on-close
       :close-on-click-modal="false"
       :close-on-press-escape="false"
       :show-close="false"
@@ -745,7 +759,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick, watch, onMounted } from 'vue'
+import { ref, reactive, computed, nextTick, watch, onMounted, onBeforeUnmount, onDeactivated } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Upload, ArrowDown, ArrowRight, Picture, VideoCameraFilled, Check, Close, InfoFilled, Promotion, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -1095,6 +1109,9 @@ const publishProgress = ref(0)
 const publishResults = ref([])
 const currentPublishingAccount = ref('')
 const isCancelled = ref(false)
+let batchDialogCloseTimer = null
+let cropDragMoveHandler = null
+let cropDragUpHandler = null
 
 const coverInputRef = ref(null)
 
@@ -1201,7 +1218,7 @@ function startCropDrag(e) {
     origRect: { ...cropRect },
   }
 
-  const onMove = (ev) => {
+  cropDragMoveHandler = (ev) => {
     if (!cropDragState.value) return
     const dx = (ev.clientX - cropDragState.value.startX) / cropDisplayScale.value
     const dy = (ev.clientY - cropDragState.value.startY) / cropDisplayScale.value
@@ -1247,14 +1264,20 @@ function startCropDrag(e) {
     redrawCropCanvas()
   }
 
-  const onUp = () => {
+  cropDragUpHandler = () => {
     cropDragState.value = null
-    window.removeEventListener('mousemove', onMove)
-    window.removeEventListener('mouseup', onUp)
+    if (cropDragMoveHandler) {
+      window.removeEventListener('mousemove', cropDragMoveHandler)
+      cropDragMoveHandler = null
+    }
+    if (cropDragUpHandler) {
+      window.removeEventListener('mouseup', cropDragUpHandler)
+      cropDragUpHandler = null
+    }
   }
 
-  window.addEventListener('mousemove', onMove)
-  window.addEventListener('mouseup', onUp)
+  window.addEventListener('mousemove', cropDragMoveHandler)
+  window.addEventListener('mouseup', cropDragUpHandler)
 }
 
 function redrawCropCanvas() {
@@ -1765,7 +1788,7 @@ async function publishAll() {
     ElMessage.warning(`发布完成：${successCount}个成功，${failCount}个失败`)
   } else {
     ElMessage.success('全部发布成功')
-    setTimeout(() => {
+    batchDialogCloseTimer = window.setTimeout(() => {
       batchPublishDialogVisible.value = false
     }, 1500)
   }
@@ -1802,6 +1825,41 @@ onMounted(async () => {
 
   initializePlatformSelection()
   selectDefaultPublishAccounts()
+})
+
+function cleanupTransientUiState() {
+  accountDialogVisible.value = false
+  topicDialogVisible.value = false
+  videoUploadDialogVisible.value = false
+  coverUploadDialogVisible.value = false
+  cropDialogVisible.value = false
+  materialLibraryVisible.value = false
+  batchPublishDialogVisible.value = false
+
+  if (batchDialogCloseTimer !== null) {
+    window.clearTimeout(batchDialogCloseTimer)
+    batchDialogCloseTimer = null
+  }
+
+  cropDragState.value = null
+
+  if (cropDragMoveHandler) {
+    window.removeEventListener('mousemove', cropDragMoveHandler)
+    cropDragMoveHandler = null
+  }
+
+  if (cropDragUpHandler) {
+    window.removeEventListener('mouseup', cropDragUpHandler)
+    cropDragUpHandler = null
+  }
+}
+
+onDeactivated(() => {
+  cleanupTransientUiState()
+})
+
+onBeforeUnmount(() => {
+  cleanupTransientUiState()
 })
 </script>
 
