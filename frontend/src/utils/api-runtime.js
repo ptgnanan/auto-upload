@@ -6,7 +6,8 @@ const PLATFORM_NAMES = {
   5: 'B\u7ad9',
   6: '\u767e\u5bb6\u53f7',
   7: 'TikTok',
-  8: 'YouTube'
+  8: 'YouTube',
+  9: '\u5c0f\u9ed1\u76d2'
 }
 
 const STATUS_LABELS = {
@@ -20,6 +21,29 @@ const DEFAULT_API_BASE_URL =
     ? import.meta.env.VITE_API_BASE_URL
     : ''
 
+const RUNTIME_PORT_STORAGE_KEY = 'sau-backend-port'
+
+export const getRuntimeBackendBaseUrl = () => {
+  if (typeof window === 'undefined') return ''
+
+  const savedPort = window.localStorage.getItem(RUNTIME_PORT_STORAGE_KEY)
+  if (!savedPort) return ''
+
+  const port = String(savedPort).trim()
+  if (!/^\d+$/.test(port)) return ''
+
+  return `${window.location.protocol}//${window.location.hostname}:${port}`
+}
+
+export const setRuntimeBackendPort = (port) => {
+  if (typeof window === 'undefined') return
+
+  const normalized = String(port || '').trim()
+  if (!/^\d+$/.test(normalized)) return
+
+  window.localStorage.setItem(RUNTIME_PORT_STORAGE_KEY, normalized)
+}
+
 const trimTrailingSlash = (value) => String(value || '').replace(/\/+$/, '')
 
 const normalizePath = (path) => {
@@ -27,7 +51,7 @@ const normalizePath = (path) => {
   return path.startsWith('/') ? path : `/${path}`
 }
 
-export const resolveApiUrl = (path, baseUrl = DEFAULT_API_BASE_URL) => {
+export const resolveApiUrl = (path, baseUrl = DEFAULT_API_BASE_URL || getRuntimeBackendBaseUrl()) => {
   const normalizedBase = trimTrailingSlash(baseUrl)
   const normalizedPath = normalizePath(path)
 

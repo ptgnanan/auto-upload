@@ -46,6 +46,7 @@ def _populate_registry() -> None:
         (6, ".baijiahao.platform", "BaijiahaoPlatform"),
         (7, ".tiktok.platform", "TiktokPlatform"),
         (8, ".youtube.platform", "YoutubePlatform"),
+        (9, ".heybox.platform", "HeyboxPlatform"),
     ]
 
     import importlib

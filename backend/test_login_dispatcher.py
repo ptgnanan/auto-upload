@@ -41,6 +41,18 @@ class LoginDispatcherTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.headers.get("Content-Type", "").startswith("text/event-stream"))
 
+    def test_heybox_login_uses_override_even_in_old_mode(self):
+        """Heybox login should still use the new platform dispatcher under old engine mode."""
+
+        with patch.object(backend_app_module, "get_engine_mode", return_value="old"), \
+             patch.object(backend_app_module, "get_platform", return_value=_FakePlatform()), \
+             patch.object(sau_backend, "sse_stream", return_value=iter(["data: ok\n\n"])):
+            response = self.client.get("/login?type=9&id=heybox-account")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("X-Engine-Mode"), "old")
+        self.assertTrue(response.headers.get("Content-Type", "").startswith("text/event-stream"))
+
 
 if __name__ == "__main__":
     unittest.main()

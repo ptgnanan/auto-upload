@@ -67,6 +67,13 @@ def _safe_debug_print(*args: Any, **kwargs: Any) -> None:
         return
 
 
+def _parse_platform_type(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _get_account_record(account_id):
     """根据 id 从 user_info 查账号记录，返回 dict 或 None"""
     with sqlite3.connect(str(DB_PATH)) as conn:
@@ -320,11 +327,44 @@ def _override_post_video_batch():
     return jsonify({"code": 200, "msg": None, "data": None}), 200
 
 
+def _should_use_override(mode: str, path: str) -> bool:
+    if mode == 'new':
+        return True
+
+    if path in ('/getAccounts', '/getValidAccounts'):
+        return True
+
+    platform_type = None
+    if path == '/login':
+        platform_type = _parse_platform_type(request.args.get('type'))
+    elif request.is_json:
+        payload = request.get_json(silent=True) or {}
+        platform_type = _parse_platform_type(payload.get('type'))
+
+    if platform_type == 9 and path in ('/login', '/openCreatorCenter', '/checkAccount', '/syncProfile', '/postVideo', '/postVideoBatch'):
+        return True
+
+    if path in ('/openCreatorCenter', '/checkAccount', '/syncProfile'):
+        account_id = None
+        if path == '/checkAccount':
+            account_id = request.args.get('id')
+        elif request.is_json:
+            payload = request.get_json(silent=True) or {}
+            account_id = payload.get('id')
+
+        if account_id and str(account_id).isdigit():
+            record = _get_account_record(int(account_id))
+            if record and record.get('type') == 9:
+                return True
+
+    return False
+
+
 def _make_dispatcher(original_fn, override_fn):
     def dispatcher(*args, **kwargs):
         mode = get_engine_mode()
         _safe_debug_print(f"[ENGINE] mode={mode} path={request.path}", flush=True)
-        if mode == 'new' or request.path in ('/getAccounts', '/getValidAccounts'):
+        if _should_use_override(mode, request.path):
             resp = override_fn(*args, **kwargs)
         else:
             resp = original_fn(*args, **kwargs) if original_fn else (jsonify({"code": 500, "msg": "旧版引擎不可用"}), 500)
@@ -360,7 +400,7 @@ def _get_db_path():
 
 
 DB_PATH = _get_db_path()
-PLATFORM_MAP = {1: "小红书", 2: "视频号", 3: "抖音", 4: "快手", 5: "B站", 6: "百家号", 7: "TikTok", 8: "YouTube"}
+PLATFORM_MAP = {1: "小红书", 2: "视频号", 3: "抖音", 4: "快手", 5: "B站", 6: "百家号", 7: "TikTok", 8: "YouTube", 9: "小黑盒"}
 
 
 def _record_publish(task_id, platform, account_name, video_path, title, description, tags, status, started_at, finished_at=None, error_message=""):
@@ -492,6 +532,16 @@ def find_available_port(start_port=5409, max_attempts=10):
     raise RuntimeError(f"Could not find available port in range {start_port}-{start_port + max_attempts}")
 
 
+def _write_runtime_port(port: int) -> None:
+    runtime_file = Path(__file__).parent.parent / "data" / "runtime.json"
+    runtime_file.parent.mkdir(parents=True, exist_ok=True)
+    runtime_file.write_text(
+        json.dumps({"backendPort": port}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    _safe_debug_print(f"[Startup] Runtime port file updated: {runtime_file} -> {port}", flush=True)
+
+
 @app.route("/api/health", methods=['GET'])
 def health_check():
     """诊断端点：检查环境、数据库路径和连接"""
@@ -554,4 +604,5 @@ if __name__ == "__main__":
     from waitress import serve
     # Expose port via environment variable for frontend
     os.environ["SAU_PORT"] = str(port)
+    _write_runtime_port(port)
     serve(app, host="0.0.0.0", port=port)
