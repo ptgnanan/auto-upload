@@ -342,7 +342,7 @@
           </div>
 
           <div class="settings-grid">
-            <template v-for="field in currentPlatformConfig.settingsFields" :key="field.key">
+            <template v-for="field in currentPlatformConfig.settingsFields" :key="`${selectedPlatform || 'none'}:${field.key}:${field.type}`">
               <!-- 其他字段通用渲染（排除 title, description, videoFormat） -->
               <template v-if="field.key !== 'title' && field.key !== 'description' && field.key !== 'videoFormat'">
                 <div
@@ -385,17 +385,48 @@
                     v-else-if="field.type === 'select'"
                     v-model="form[field.key]"
                     :placeholder="field.placeholder"
+                    :filterable="!!field.filterable"
+                    :remote="isHeyboxRemoteField(field)"
+                    :remote-method="query => handleHeyboxRemoteSearch(field, query)"
+                    :reserve-keyword="isHeyboxRemoteField(field)"
+                    :loading="isDynamicFieldLoading(field)"
+                    default-first-option
                     size="small"
                     clearable
                     class="cursor-pointer"
                   >
                     <el-option
-                      v-for="opt in (field.options || [])"
+                      v-for="opt in getFieldOptions(field)"
                       :key="opt.value"
                       :label="opt.label"
                       :value="opt.value"
                     />
-                    <el-option v-if="!field.options || field.options.length === 0" label="暂无可选项" :value="''" disabled />
+                    <el-option v-if="!getFieldOptions(field).length" label="暂无可选项" :value="''" disabled />
+                  </el-select>
+                  <el-select
+                    v-else-if="field.type === 'multiselect'"
+                    v-model="form[field.key]"
+                    :placeholder="field.placeholder"
+                    :filterable="true"
+                    :remote="isHeyboxRemoteField(field)"
+                    :remote-method="query => handleHeyboxRemoteSearch(field, query)"
+                    :reserve-keyword="isHeyboxRemoteField(field)"
+                    :loading="isDynamicFieldLoading(field)"
+                    multiple
+                    allow-create
+                    default-first-option
+                    collapse-tags
+                    collapse-tags-tooltip
+                    clearable
+                    size="small"
+                    class="cursor-pointer"
+                  >
+                    <el-option
+                      v-for="opt in getFieldOptions(field)"
+                      :key="opt.value"
+                      :label="opt.label"
+                      :value="opt.value"
+                    />
                   </el-select>
                   <el-date-picker
                     v-else-if="field.type === 'datetime'"
@@ -807,6 +838,10 @@ const currentPlatformConfig = computed(() =>
   selectedPlatform.value ? getPlatformByKey(selectedPlatform.value) : null
 )
 
+const settingsPanelKey = computed(() =>
+  `${selectedPlatform.value || 'none'}:${selectedAccountId.value || 'platform'}`
+)
+
 // ========== Public Config (shared across all accounts) ==========
 const commonConfig = reactive({
   videoLandscape: null,  // { name, url, path, size, type }
@@ -846,10 +881,26 @@ function createDefaultPlatformConfigs() {
     baijiahao: { title: '', description: '', aiContent: false, isOriginal: false, videoFormat: '' },
     tiktok: { title: '', description: '', aiContent: false, isOriginal: false, scheduleTime: '', videoFormat: '' },
     youtube: { title: '', description: '', audience: 'not_kids', alteredContent: false, scheduleTime: '', videoFormat: '' },
+    heybox: { title: '', description: '', videoFormat: '', communityName: '', heyboxTopics: [] },
   }
 }
 
 const platformConfigs = reactive(createDefaultPlatformConfigs())
+const publishAccountIds = reactive(new Set())
+const heyboxEditorOptions = reactive({
+  communities: [],
+  topics: [],
+  communitiesLoading: false,
+  topicsLoading: false,
+  lastCommunityKeyword: '',
+  lastTopicKeyword: '',
+  communitySearchCache: {},
+  topicSearchCache: {},
+})
+let heyboxCommunitySearchToken = 0
+let heyboxTopicSearchToken = 0
+let heyboxCommunitySearchTimer = null
+let heyboxTopicSearchTimer = null
 
 // ========== Account-level Overrides (账号级覆盖, 优先级高于渠道默认) ==========
 const accountOverrides = reactive({})
@@ -887,8 +938,8 @@ function getAccountSettings(accountId, platformKey) {
   // 账号级覆盖优先，其次渠道默认
   const merged = { ...platform }
   for (const key of Object.keys(merged)) {
-    if (override[key] !== undefined && override[key] !== '') {
-      merged[key] = override[key]
+    if (hasMeaningfulValue(override[key])) {
+      merged[key] = cloneFieldValue(override[key])
     }
   }
   return merged
@@ -900,7 +951,7 @@ function getAccountSettings(accountId, platformKey) {
 function hasAccountOverride(accountId) {
   const override = accountOverrides[accountId]
   if (!override) return false
-  return Object.values(override).some(v => v !== undefined && v !== '' && v !== false)
+  return Object.values(override).some(v => hasMeaningfulValue(v))
 }
 
 // 表单数据（reactive 对象，支持 v-model 绑定到属性）
@@ -909,6 +960,123 @@ let formSyncToken = 0
 
 function getPlatformFieldKeys(platformKey) {
   return Object.keys(platformConfigs[platformKey] || {})
+}
+
+function cloneFieldValue(value) {
+  if (Array.isArray(value)) return [...value]
+  if (value && typeof value === 'object') return { ...value }
+  return value
+}
+
+function hasMeaningfulValue(value) {
+  if (value === undefined || value === null) return false
+  if (typeof value === 'string') return value !== ''
+  if (Array.isArray(value)) return value.length > 0
+  return true
+}
+
+function isSameFieldValue(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+function normalizeSelectOptions(items = [], valueKey = 'name') {
+  return (Array.isArray(items) ? items : [])
+    .map(item => {
+      const value = String(item?.[valueKey] || '').trim()
+      if (!value) return null
+      return {
+        label: item?.desc ? `${value} · ${item.desc}` : value,
+        value,
+      }
+    })
+    .filter(Boolean)
+}
+
+function ensureSelectOption(items = [], value, extra = {}) {
+  const normalizedValue = String(value || '').trim()
+  if (!normalizedValue) return Array.isArray(items) ? [...items] : []
+
+  const list = Array.isArray(items) ? [...items] : []
+  const exists = list.some(item => String(item?.name || '').trim() === normalizedValue)
+  if (!exists) {
+    list.unshift({ name: normalizedValue, ...extra })
+  }
+  return list
+}
+
+function getFieldOptions(field) {
+  if (selectedPlatform.value === 'heybox') {
+    if (field.key === 'communityName') {
+      return normalizeSelectOptions(
+        ensureSelectOption(heyboxEditorOptions.communities, form.communityName)
+      )
+    }
+    if (field.key === 'heyboxTopics') {
+      const selectedTopics = Array.isArray(form.heyboxTopics) ? form.heyboxTopics : []
+      let topicItems = Array.isArray(heyboxEditorOptions.topics) ? [...heyboxEditorOptions.topics] : []
+      for (const topic of selectedTopics) {
+        topicItems = ensureSelectOption(topicItems, topic)
+      }
+      return normalizeSelectOptions(topicItems)
+    }
+  }
+  return field.options || []
+}
+
+function isHeyboxRemoteField(field) {
+  if (selectedPlatform.value !== 'heybox') return false
+  return field.key === 'communityName' || field.key === 'heyboxTopics'
+}
+
+function isDynamicFieldLoading(field) {
+  if (selectedPlatform.value !== 'heybox') return false
+  if (field.key === 'communityName') return heyboxEditorOptions.communitiesLoading
+  if (field.key === 'heyboxTopics') return heyboxEditorOptions.topicsLoading
+  return false
+}
+
+function getActivePlatformAccounts(platformKey) {
+  return accountGroups.value
+    .find(group => group.key === platformKey)
+    ?.accounts || []
+}
+
+function resolveHeyboxOptionAccountId() {
+  if (selectedPlatform.value !== 'heybox') return null
+
+  const selectedId = normalizeAccountId(selectedAccountId.value)
+  if (selectedId !== null) {
+    const selectedAccount = accountStore.accounts.find(account => account.id === selectedId && account.type === 9)
+    if (selectedAccount) return selectedId
+  }
+
+  const heyboxAccounts = getActivePlatformAccounts('heybox')
+  const preferredVisibleAccount = heyboxAccounts.find(account => publishAccountIds.has(account.id))
+  if (preferredVisibleAccount) return preferredVisibleAccount.id
+
+  if (heyboxAccounts.length > 0) return heyboxAccounts[0].id
+
+  const fallbackAccount = accountStore.accounts.find(account => account.type === 9)
+  return fallbackAccount ? fallbackAccount.id : null
+}
+
+function resetHeyboxEditorSearchState() {
+  heyboxCommunitySearchToken += 1
+  heyboxTopicSearchToken += 1
+  if (heyboxCommunitySearchTimer) {
+    clearTimeout(heyboxCommunitySearchTimer)
+    heyboxCommunitySearchTimer = null
+  }
+  if (heyboxTopicSearchTimer) {
+    clearTimeout(heyboxTopicSearchTimer)
+    heyboxTopicSearchTimer = null
+  }
+  heyboxEditorOptions.communitiesLoading = false
+  heyboxEditorOptions.topicsLoading = false
+  heyboxEditorOptions.communities = []
+  heyboxEditorOptions.topics = []
+  heyboxEditorOptions.lastCommunityKeyword = ''
+  heyboxEditorOptions.lastTopicKeyword = ''
 }
 
 function syncFormFromSelection() {
@@ -920,7 +1088,7 @@ function syncFormFromSelection() {
   const token = ++formSyncToken
 
   for (const key of fieldKeys) {
-    form[key] = merged[key]
+    form[key] = cloneFieldValue(merged[key])
   }
 
   nextTick(() => {
@@ -941,7 +1109,7 @@ function getMergedSettings() {
       return {
         ...platform,
         ...Object.fromEntries(
-          Object.entries(override).filter(([_, v]) => v !== undefined && v !== '' && v !== false)
+          Object.entries(override).filter(([_, v]) => hasMeaningfulValue(v))
         ),
       }
     }
@@ -950,8 +1118,13 @@ function getMergedSettings() {
 }
 
 // 切换平台/账号时重新填充表单
-watch([selectedPlatform, selectedAccountId], () => {
+watch([selectedPlatform, selectedAccountId, () => publishAccountIds.size], ([platformKey]) => {
   syncFormFromSelection()
+  if (platformKey === 'heybox') {
+    resetHeyboxEditorSearchState()
+  } else if (platformKey !== 'heybox') {
+    resetHeyboxEditorSearchState()
+  }
 }, { immediate: true })
 
 // 表单变更时同步到 store
@@ -965,8 +1138,8 @@ watch(form, (newVal) => {
     // 账号级：计算与渠道默认的差异，存入 accountOverrides
     const diff = {}
     for (const key of fieldKeys) {
-      if (newVal[key] !== platform[key]) {
-        diff[key] = newVal[key]
+      if (!isSameFieldValue(newVal[key], platform[key])) {
+        diff[key] = cloneFieldValue(newVal[key])
       }
     }
     if (Object.keys(diff).length > 0) {
@@ -977,7 +1150,7 @@ watch(form, (newVal) => {
   } else {
     // 渠道级：直接写入 platformConfigs
     for (const key of fieldKeys) {
-      platform[key] = newVal[key]
+      platform[key] = cloneFieldValue(newVal[key])
     }
   }
 }, { deep: true })
@@ -1037,7 +1210,6 @@ const materialLibraryMode = ref('video') // 'video' | 'cover'
 const materialLibraryCoverTarget = ref('landscape') // 'landscape' | 'portrait'
 const materialLibraryVideoTarget = ref('landscape') // 'landscape' | 'portrait'
 const batchPublishDialogVisible = ref(false)
-const publishAccountIds = reactive(new Set())
 
 // Account dialog state
 const accountFilterPlatform = ref('')
@@ -1087,6 +1259,108 @@ const recommendedTopics = [
   '科技', '生活', '娱乐', '体育', '教育', '艺术',
   '健康', '时尚', '美妆', '摄影', '宠物', '汽车',
 ]
+
+async function searchHeyboxEditorOptions(optionType, keyword = '') {
+  const accountId = resolveHeyboxOptionAccountId()
+  const normalizedId = normalizeAccountId(accountId)
+  if (!normalizedId) return []
+
+  const trimmedKeyword = String(keyword || '').trim()
+  const isCommunity = optionType === 'community'
+  const requestToken = isCommunity ? ++heyboxCommunitySearchToken : ++heyboxTopicSearchToken
+  const cacheKey = trimmedKeyword.toLowerCase()
+  const cache = isCommunity ? heyboxEditorOptions.communitySearchCache : heyboxEditorOptions.topicSearchCache
+
+  if (isCommunity) {
+    heyboxEditorOptions.communitiesLoading = true
+    heyboxEditorOptions.lastCommunityKeyword = trimmedKeyword
+  } else {
+    heyboxEditorOptions.topicsLoading = true
+    heyboxEditorOptions.lastTopicKeyword = trimmedKeyword
+  }
+
+  try {
+    if (!trimmedKeyword) {
+      if (isCommunity) {
+        heyboxEditorOptions.communities = ensureSelectOption([], form.communityName)
+      } else {
+        const selectedTopics = Array.isArray(form.heyboxTopics) ? form.heyboxTopics : []
+        heyboxEditorOptions.topics = selectedTopics.reduce(
+          (items, topic) => ensureSelectOption(items, topic),
+          []
+        )
+      }
+      return isCommunity ? heyboxEditorOptions.communities : heyboxEditorOptions.topics
+    }
+
+    if (cache[cacheKey]) {
+      const cachedData = [...cache[cacheKey]]
+      if (isCommunity) {
+        if (requestToken !== heyboxCommunitySearchToken) return []
+        heyboxEditorOptions.communities = cachedData
+      } else {
+        if (requestToken !== heyboxTopicSearchToken) return []
+        heyboxEditorOptions.topics = cachedData
+      }
+      return cachedData
+    }
+
+    const res = await http.get('/api/v2/heybox/editor-search', {
+      accountId: normalizedId,
+      type: optionType,
+      keyword: trimmedKeyword,
+    })
+    const data = Array.isArray(res.data) ? res.data : []
+    cache[cacheKey] = [...data]
+
+    if (isCommunity) {
+      if (requestToken !== heyboxCommunitySearchToken) return []
+      heyboxEditorOptions.communities = data
+    } else {
+      if (requestToken !== heyboxTopicSearchToken) return []
+      heyboxEditorOptions.topics = data
+    }
+
+    return data
+  } catch (error) {
+    console.error(`搜索小黑盒${isCommunity ? '社区' : '话题'}失败:`, error)
+    if (isCommunity) {
+      if (requestToken !== heyboxCommunitySearchToken) return []
+      heyboxEditorOptions.communities = []
+    } else {
+      if (requestToken !== heyboxTopicSearchToken) return []
+      heyboxEditorOptions.topics = []
+    }
+    return []
+  } finally {
+    if (isCommunity) {
+      if (requestToken === heyboxCommunitySearchToken) {
+        heyboxEditorOptions.communitiesLoading = false
+      }
+    } else if (requestToken === heyboxTopicSearchToken) {
+      heyboxEditorOptions.topicsLoading = false
+    }
+  }
+}
+
+function handleHeyboxRemoteSearch(field, query) {
+  if (selectedPlatform.value !== 'heybox') return
+  const isCommunity = field.key === 'communityName'
+  const currentTimer = isCommunity ? heyboxCommunitySearchTimer : heyboxTopicSearchTimer
+  if (currentTimer) {
+    clearTimeout(currentTimer)
+  }
+
+  const nextTimer = setTimeout(() => {
+    searchHeyboxEditorOptions(isCommunity ? 'community' : 'topic', query)
+  }, 250)
+
+  if (isCommunity) {
+    heyboxCommunitySearchTimer = nextTimer
+  } else if (field.key === 'heyboxTopics') {
+    heyboxTopicSearchTimer = nextTimer
+  }
+}
 
 // Material library state
 const selectedMaterials = ref([])
@@ -1544,6 +1818,9 @@ function resetPlatformConfigs(snapshot = {}) {
 
   Object.entries(defaultConfigs).forEach(([platformKey, defaultConfig]) => {
     Object.assign(platformConfigs[platformKey], defaultConfig, snapshot[platformKey] || {})
+    if (platformKey === 'heybox' && !Array.isArray(platformConfigs[platformKey].heyboxTopics)) {
+      platformConfigs[platformKey].heyboxTopics = []
+    }
   })
 }
 
@@ -1709,7 +1986,7 @@ async function publishAll() {
       const accountOverride = accountOverrides[account.id]
       const mergedSettings = accountOverride && Object.keys(accountOverride).length > 0
         ? { ...pSettings, ...Object.fromEntries(
-            Object.entries(accountOverride).filter(([_, v]) => v !== undefined && v !== '' && v !== false)
+            Object.entries(accountOverride).filter(([_, v]) => hasMeaningfulValue(v))
           )}
         : { ...pSettings }
       allTasks.push({ account, group, platformSettings: mergedSettings })
@@ -1761,8 +2038,17 @@ async function publishAll() {
 
     try {
       // 解析平台自定义标签：支持 "#xx #xx" 和 "xx,xx" 两种格式
+      const normalizedCommonTopics = Array.isArray(commonConfig.topics)
+        ? commonConfig.topics.map(topic => String(topic || '').trim()).filter(Boolean)
+        : []
       const customTags = (platformSettings.tags || '').split(/[,，\s]+/).map(t => t.replace(/^#/, '').trim()).filter(Boolean)
-      const allTags = [...commonConfig.topics, ...customTags]
+      const allTags = [...normalizedCommonTopics, ...customTags]
+      const heyboxTopics = Array.from(new Set([
+        ...normalizedCommonTopics,
+        ...(Array.isArray(platformSettings.heyboxTopics)
+          ? platformSettings.heyboxTopics.map(topic => String(topic || '').trim()).filter(Boolean)
+          : []),
+      ])).slice(0, 5)
 
       const publishData = {
         type: group.id,
@@ -1787,6 +2073,8 @@ async function publishAll() {
         creationDeclaration: platformSettings.creationDeclaration || '',
         audience: platformSettings.audience || 'not_kids',
         alteredContent: platformSettings.alteredContent || false,
+        communityName: platformSettings.communityName || '',
+        heyboxTopics,
       }
 
       await http.post('/postVideo', publishData)

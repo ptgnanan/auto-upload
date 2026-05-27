@@ -257,6 +257,24 @@ export const PLATFORMS = {
     ],
     defaultSettings: { title: '', description: '', audience: 'not_kids', alteredContent: false, scheduleTime: '', videoFormat: '' },
   },
+  HEYBOX: {
+    id: 9,
+    key: 'heybox',
+    name: '小黑盒',
+    shortName: 'HEYBOX',
+    letter: 'H',
+    logo: null,
+    color: '#111827',
+    bgColor: 'rgba(17, 24, 39, 0.15)',
+    cssClass: 'heybox',
+    creatorUrl: 'https://www.xiaoheihe.cn/creator/editor/draft/video',
+    settingsFields: [
+      { key: 'videoFormat', label: '视频格式', type: 'radio', options: [{ label: '横版', value: 'landscape' }, { label: '竖版', value: 'portrait' }] },
+      { key: 'communityName', label: '关联社区', type: 'select', placeholder: '请输入关键词搜索社区', filterable: true },
+      { key: 'heyboxTopics', label: '添加话题', type: 'multiselect', placeholder: '请选择或输入话题' },
+    ],
+    defaultSettings: { title: '', description: '', videoFormat: '', communityName: '', heyboxTopics: [] },
+  },
 }
 
 // 派生数据
