@@ -736,6 +736,70 @@
 
     <!-- Batch Publish Progress Dialog -->
     <el-dialog
+      v-model="platformPublishDialogVisible"
+      title="选择发布平台"
+      width="620px"
+      append-to-body
+      destroy-on-close
+      class="platform-publish-dialog"
+    >
+      <div class="platform-publish-content">
+        <div class="platform-publish-toolbar">
+          <span>请选择本次要发布的平台和账号</span>
+          <div class="dialog-footer-btns">
+            <el-button size="small" @click="selectAllPublishCandidates">全选</el-button>
+            <el-button size="small" @click="clearPublishCandidates">清空</el-button>
+          </div>
+        </div>
+
+        <div v-if="publishCandidateGroups.length" class="platform-publish-groups">
+          <div
+            v-for="group in publishCandidateGroups"
+            :key="group.key"
+            class="platform-publish-group"
+          >
+            <div class="platform-publish-group-header">
+              <el-checkbox
+                :model-value="isGroupFullySelected(group)"
+                :indeterminate="isGroupPartiallySelected(group)"
+                @change="checked => togglePublishGroupSelection(group, checked)"
+              >
+                <span class="platform-publish-group-title">
+                  <span class="platform-badge" :style="{ background: group.color }">{{ group.letter }}</span>
+                  {{ group.name }}
+                </span>
+              </el-checkbox>
+              <span class="hint">已选 {{ getSelectedCountForGroup(group) }}/{{ group.accounts.length }}</span>
+            </div>
+
+            <el-checkbox-group v-model="tempPublishAccountIds" class="platform-publish-account-list">
+              <label
+                v-for="account in group.accounts"
+                :key="account.id"
+                class="platform-publish-account"
+              >
+                <el-checkbox :label="account.id">
+                  <span>{{ account.name }}</span>
+                </el-checkbox>
+              </label>
+            </el-checkbox-group>
+          </div>
+        </div>
+        <div v-else class="dialog-empty">暂无可发布账号</div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <span class="selected-count">已选择 {{ tempPublishAccountIds.length }} 个账号</span>
+          <div class="dialog-footer-btns">
+            <el-button @click="platformPublishDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="confirmPublishSelection">开始发布</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       v-model="batchPublishDialogVisible"
       title="批量发布进度"
       width="500px"
@@ -1209,7 +1273,9 @@ const materialLibraryVisible = ref(false)
 const materialLibraryMode = ref('video') // 'video' | 'cover'
 const materialLibraryCoverTarget = ref('landscape') // 'landscape' | 'portrait'
 const materialLibraryVideoTarget = ref('landscape') // 'landscape' | 'portrait'
+const platformPublishDialogVisible = ref(false)
 const batchPublishDialogVisible = ref(false)
+const tempPublishAccountIds = ref([])
 
 // Account dialog state
 const accountFilterPlatform = ref('')
@@ -1776,6 +1842,45 @@ const filteredAccounts = computed(() => {
   return list
 })
 
+const publishCandidateGroups = computed(() => {
+  return accountGroups.value
+    .map(group => ({
+      ...group,
+      accounts: group.accounts.filter(account => publishAccountIds.has(account.id)),
+    }))
+    .filter(group => group.accounts.length > 0)
+})
+
+function getSelectedCountForGroup(group) {
+  return group.accounts.filter(account => tempPublishAccountIds.value.includes(account.id)).length
+}
+
+function isGroupFullySelected(group) {
+  return group.accounts.length > 0 && group.accounts.every(account => tempPublishAccountIds.value.includes(account.id))
+}
+
+function isGroupPartiallySelected(group) {
+  const selectedCount = getSelectedCountForGroup(group)
+  return selectedCount > 0 && selectedCount < group.accounts.length
+}
+
+function togglePublishGroupSelection(group, checked) {
+  const ids = group.accounts.map(account => account.id)
+  if (checked) {
+    tempPublishAccountIds.value = Array.from(new Set([...tempPublishAccountIds.value, ...ids]))
+    return
+  }
+  tempPublishAccountIds.value = tempPublishAccountIds.value.filter(id => !ids.includes(id))
+}
+
+function selectAllPublishCandidates() {
+  tempPublishAccountIds.value = publishCandidateGroups.value.flatMap(group => group.accounts.map(account => account.id))
+}
+
+function clearPublishCandidates() {
+  tempPublishAccountIds.value = []
+}
+
 function confirmAccountSelection() {
   tempSelectedAccounts.value.forEach(id => {
     publishAccountIds.add(id)
@@ -1941,48 +2046,30 @@ async function consumeDraftRouteIfNeeded() {
 }
 
 async function publishAll() {
-  // Validate
   if (!commonConfig.videoLandscape && !commonConfig.videoPortrait) {
     ElMessage.error('请先上传至少一个视频文件')
     return
   }
 
-  // Check each selected account has a title (platform-level or account-level)
-  const accountsWithoutTitle = []
-  for (const group of accountGroups.value) {
-    if (group.accounts.length === 0) continue
-    const pSettings = platformConfigs[group.key] || {}
-    for (const account of group.accounts) {
-      if (!publishAccountIds.has(account.id)) continue
-      // 合并账号级覆盖后检查标题
-      const accountOverride = accountOverrides[account.id]
-      const mergedTitle = (accountOverride && accountOverride.title)
-        || pSettings.title
-      if (!mergedTitle || !mergedTitle.trim()) {
-        accountsWithoutTitle.push(`${account.name}(${group.name})`)
-      }
-    }
-  }
-  if (accountsWithoutTitle.length > 0) {
-    ElMessage.error(`以下账号未设置标题：${accountsWithoutTitle.join('、')}`)
+  const selectedCandidateIds = publishCandidateGroups.value.flatMap(group =>
+    group.accounts.map(account => account.id)
+  )
+  if (selectedCandidateIds.length === 0) {
+    ElMessage.warning('没有可发布的账号')
     return
   }
 
-  publishing.value = true
-  publishProgress.value = 0
-  publishResults.value = []
-  isCancelled.value = false
-  currentPublishingAccount.value = ''
-  batchPublishDialogVisible.value = true
+  tempPublishAccountIds.value = [...selectedCandidateIds]
+  platformPublishDialogVisible.value = true
+}
 
-  // Collect selected accounts only
+function collectPublishTasks(selectedIds) {
   const allTasks = []
   for (const group of accountGroups.value) {
     if (group.accounts.length === 0) continue
     const pSettings = platformConfigs[group.key] || {}
     for (const account of group.accounts) {
-      if (!publishAccountIds.has(account.id)) continue
-      // 合并账号级覆盖
+      if (!selectedIds.has(account.id)) continue
       const accountOverride = accountOverrides[account.id]
       const mergedSettings = accountOverride && Object.keys(accountOverride).length > 0
         ? { ...pSettings, ...Object.fromEntries(
@@ -1992,13 +2079,52 @@ async function publishAll() {
       allTasks.push({ account, group, platformSettings: mergedSettings })
     }
   }
+  return allTasks
+}
 
-  if (allTasks.length === 0) {
-    ElMessage.warning('没有可发布的账号')
-    publishing.value = false
-    batchPublishDialogVisible.value = false
+function validatePublishTasks(tasks) {
+  const accountsWithoutTitle = []
+  for (const { account, group, platformSettings } of tasks) {
+    const mergedTitle = platformSettings.title
+    if (!mergedTitle || !mergedTitle.trim()) {
+      accountsWithoutTitle.push(`${account.name}(${group.name})`)
+    }
+  }
+  if (accountsWithoutTitle.length > 0) {
+    ElMessage.error(`以下账号未设置标题：${accountsWithoutTitle.join('、')}`)
+    return false
+  }
+  return true
+}
+
+async function confirmPublishSelection() {
+  const selectedIds = new Set(tempPublishAccountIds.value)
+  if (selectedIds.size === 0) {
+    ElMessage.warning('请至少选择一个发布账号')
     return
   }
+
+  const allTasks = collectPublishTasks(selectedIds)
+  if (allTasks.length === 0) {
+    ElMessage.warning('没有可发布的账号')
+    return
+  }
+
+  if (!validatePublishTasks(allTasks)) {
+    return
+  }
+
+  platformPublishDialogVisible.value = false
+  await executeBatchPublish(allTasks)
+}
+
+async function executeBatchPublish(allTasks) {
+  publishing.value = true
+  publishProgress.value = 0
+  publishResults.value = []
+  isCancelled.value = false
+  currentPublishingAccount.value = ''
+  batchPublishDialogVisible.value = true
 
   for (let i = 0; i < allTasks.length; i++) {
     if (isCancelled.value) {
