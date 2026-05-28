@@ -164,6 +164,7 @@ class TaskQueue:
             post_video_tencent, post_video_xhs,
             post_video_bilibili
         )
+        from impl.registry import get_platform
 
         file_list = [task.video_path]
         account_list = [task.account_cookie_path]
@@ -210,6 +211,21 @@ class TaskQueue:
                         title, file_list, tags, account_list, None, 0, 1, ['10:00'], 0,
                         desc=desc
                     )
+                )
+            case 6 | 7 | 8 | 9:
+                platform = get_platform(task.platform_type)
+                if not platform:
+                    raise ValueError(f"不支持的平台类型: {task.platform_type}")
+                await loop.run_in_executor(
+                    None,
+                    lambda: platform.publish_video(
+                        title=title,
+                        files=file_list,
+                        tags=tags,
+                        account_file=account_list,
+                        thumbnail_path=thumbnail_path,
+                        desc=desc,
+                    ),
                 )
             case _:
                 raise ValueError(f"不支持的平台类型: {task.platform_type}")

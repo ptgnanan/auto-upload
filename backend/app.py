@@ -264,6 +264,7 @@ def _override_post_video():
             files=data.get('fileList', []),
             tags=data.get('tags'),
             account_file=data.get('accountList', []),
+            video_format=data.get('videoFormat', ''),
             category=data.get('category'),
             enableTimer=data.get('enableTimer'),
             videos_per_day=data.get('videosPerDay'),
@@ -282,6 +283,8 @@ def _override_post_video():
             is_draft=data.get('isDraft', False),
             audience=data.get('audience', 'not_kids'),
             altered_content=data.get('alteredContent', False),
+            community_name=data.get('communityName', ''),
+            heybox_topics=data.get('heyboxTopics', []),
         )
         return jsonify({"code": 200, "msg": "发布任务已提交", "data": None}), 200
     except Exception as e:
@@ -304,6 +307,7 @@ def _override_post_video_batch():
             files=data.get('fileList', []),
             tags=data.get('tags'),
             account_file=data.get('accountList', []),
+            video_format=data.get('videoFormat', ''),
             category=data.get('category'),
             enableTimer=data.get('enableTimer'),
             videos_per_day=data.get('videosPerDay'),
@@ -322,6 +326,8 @@ def _override_post_video_batch():
             is_draft=data.get('isDraft', False),
             audience=data.get('audience', 'not_kids'),
             altered_content=data.get('alteredContent', False),
+            community_name=data.get('communityName', ''),
+            heybox_topics=data.get('heyboxTopics', []),
         )
 
     return jsonify({"code": 200, "msg": None, "data": None}), 200

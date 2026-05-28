@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from conf import BASE_DIR
 
 from .task_queue import get_task_queue, PublishTask, TaskStatus
+from impl.registry import get_platform
 
 ext_api = Blueprint('ext_api', __name__, url_prefix='/api/v2')
 
@@ -30,6 +31,18 @@ def _db_conn():
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _get_account_record(account_id):
+    conn = _db_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, type, filePath, userName, status, avatar FROM user_info WHERE id = ?",
+            (account_id,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
 
 
 # ========== 任务管理 ==========
@@ -84,7 +97,7 @@ def create_task():
         if not data.get(field):
             return jsonify({"code": 400, "msg": f"缺少必填字段: {field}"}), 400
 
-    platform_map = {1: "小红书", 2: "视频号", 3: "抖音", 4: "快手", 5: "B站"}
+    platform_map = {1: "小红书", 2: "视频号", 3: "抖音", 4: "快手", 5: "B站", 6: "百家号", 7: "TikTok", 8: "YouTube", 9: "小黑盒"}
     platform_type = data['platformType']
 
     task = PublishTask(
@@ -197,7 +210,63 @@ def queue_status():
     return jsonify({"code": 200, "data": tq.get_status()})
 
 
+@ext_api.route('/heybox/editor-options', methods=['GET'])
+def get_heybox_editor_options():
+    """Fetch Heybox communities and recommended topics for a logged-in account."""
+    account_id = request.args.get('accountId', '').strip()
+    if not account_id.isdigit():
+        return jsonify({"code": 400, "msg": "缺少有效的小黑盒账号ID", "data": None}), 400
+
+    record = _get_account_record(int(account_id))
+    if not record:
+        return jsonify({"code": 404, "msg": "账号不存在", "data": None}), 404
+
+    if int(record.get('type') or 0) != 9:
+        return jsonify({"code": 400, "msg": "当前账号不是小黑盒账号", "data": None}), 400
+
+    platform = get_platform(9)
+    if not platform:
+        return jsonify({"code": 500, "msg": "小黑盒平台未注册", "data": None}), 500
+
+    try:
+        options = platform.fetch_editor_options(record['filePath'])
+        return jsonify({"code": 200, "msg": None, "data": options})
+    except Exception as exc:
+        return jsonify({"code": 500, "msg": f"获取小黑盒社区/话题失败: {exc}", "data": None}), 500
+
+
 # ========== 发布历史 ==========
+
+@ext_api.route('/heybox/editor-search', methods=['GET'])
+def search_heybox_editor_options():
+    """Search Heybox communities or topics for a logged-in account."""
+    account_id = request.args.get('accountId', '').strip()
+    option_type = request.args.get('type', '').strip().lower()
+    keyword = request.args.get('keyword', '').strip()
+
+    if not account_id.isdigit():
+        return jsonify({"code": 400, "msg": "缺少有效的小黑盒账号ID", "data": None}), 400
+
+    if option_type not in ('community', 'topic'):
+        return jsonify({"code": 400, "msg": "搜索类型仅支持 community 或 topic", "data": None}), 400
+
+    record = _get_account_record(int(account_id))
+    if not record:
+        return jsonify({"code": 404, "msg": "账号不存在", "data": None}), 404
+
+    if int(record.get('type') or 0) != 9:
+        return jsonify({"code": 400, "msg": "当前账号不是小黑盒账号", "data": None}), 400
+
+    platform = get_platform(9)
+    if not platform:
+        return jsonify({"code": 500, "msg": "小黑盒平台未注册", "data": None}), 500
+
+    try:
+        items = platform.search_editor_options(record['filePath'], option_type, keyword)
+        return jsonify({"code": 200, "msg": None, "data": items})
+    except Exception as exc:
+        return jsonify({"code": 500, "msg": f"搜索小黑盒配置选项失败: {exc}", "data": None}), 500
+
 
 @ext_api.route('/history', methods=['GET'])
 def get_history():
@@ -205,7 +274,8 @@ def get_history():
     # 平台 key → 中文名映射
     platform_key_map = {
         'xiaohongshu': '小红书', 'channels': '视频号', 'douyin': '抖音',
-        'kuaishou': '快手', 'bilibili': 'B站',
+        'kuaishou': '快手', 'bilibili': 'B站', 'baijiahao': '百家号',
+        'tiktok': 'TikTok', 'youtube': 'YouTube', 'heybox': '小黑盒',
     }
 
     platform = request.args.get('platform')
