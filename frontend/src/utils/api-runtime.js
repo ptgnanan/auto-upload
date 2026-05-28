@@ -51,7 +51,7 @@ const normalizePath = (path) => {
   return path.startsWith('/') ? path : `/${path}`
 }
 
-export const resolveApiUrl = (path, baseUrl = DEFAULT_API_BASE_URL || getRuntimeBackendBaseUrl()) => {
+export const resolveApiUrl = (path, baseUrl = DEFAULT_API_BASE_URL || '') => {
   const normalizedBase = trimTrailingSlash(baseUrl)
   const normalizedPath = normalizePath(path)
 

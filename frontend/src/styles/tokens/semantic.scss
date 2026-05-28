@@ -1,0 +1,89 @@
+@use './base.scss' as *;
+
+:root {
+  --font-family-sans: #{$font-family-sans};
+  --font-family-mono: #{$font-family-mono};
+
+  --color-page-bg: #{$neutral-50};
+  --color-page-bg-muted: #{$neutral-100};
+  --color-surface: #{$neutral-0};
+  --color-surface-soft: #{$neutral-25};
+  --color-surface-subtle: #{$teal-50};
+  --color-surface-overlay: rgba(17, 23, 22, 0.28);
+
+  --color-text-primary: #{$neutral-900};
+  --color-text-secondary: #{$neutral-600};
+  --color-text-muted: #{$neutral-500};
+  --color-text-disabled: #{$neutral-400};
+  --color-text-inverse: #{$neutral-0};
+
+  --color-border: #{$neutral-200};
+  --color-border-soft: #{$neutral-150};
+  --color-border-strong: #{$neutral-300};
+  --color-divider: rgba(79, 93, 90, 0.12);
+
+  --color-primary: #{$teal-500};
+  --color-primary-hover: #{$teal-600};
+  --color-primary-active: #{$teal-700};
+  --color-primary-soft: #{$teal-50};
+  --color-primary-outline: rgba(20, 147, 124, 0.18);
+
+  --color-success: #{$green-500};
+  --color-success-soft: #{$green-100};
+  --color-warning: #{$amber-500};
+  --color-warning-soft: #{$amber-100};
+  --color-danger: #{$red-500};
+  --color-danger-soft: #{$red-100};
+  --color-info: #{$blue-500};
+  --color-info-soft: #{$blue-100};
+
+  --color-hover-fill: rgba(20, 147, 124, 0.06);
+  --color-selected-fill: rgba(20, 147, 124, 0.1);
+  --color-focus-ring: rgba(20, 147, 124, 0.18);
+
+  --shadow-xs: #{$shadow-xs};
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+
+  --radius-xs: #{$radius-xs};
+  --radius-sm: #{$radius-sm};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-xl: #{$radius-xl};
+  --radius-round: #{$radius-round};
+
+  --space-0: #{$space-0};
+  --space-1: #{$space-1};
+  --space-2: #{$space-2};
+  --space-3: #{$space-3};
+  --space-4: #{$space-4};
+  --space-5: #{$space-5};
+  --space-6: #{$space-6};
+  --space-7: #{$space-7};
+  --space-8: #{$space-8};
+  --space-10: #{$space-10};
+  --space-12: #{$space-12};
+
+  --text-xs: #{$text-xs};
+  --text-sm: #{$text-sm};
+  --text-base: #{$text-base};
+  --text-md: #{$text-md};
+  --text-lg: #{$text-lg};
+  --text-xl: #{$text-xl};
+  --text-2xl: #{$text-2xl};
+  --text-3xl: #{$text-3xl};
+
+  --line-height-tight: #{$line-height-tight};
+  --line-height-base: #{$line-height-base};
+  --line-height-loose: #{$line-height-loose};
+
+  --duration-fast: #{$duration-fast};
+  --duration-base: #{$duration-base};
+  --duration-slow: #{$duration-slow};
+  --ease-standard: #{$ease-standard};
+
+  --control-sm: #{$control-sm};
+  --control-md: #{$control-md};
+  --control-lg: #{$control-lg};
+}

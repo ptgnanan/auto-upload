@@ -1,82 +1,60 @@
 <template>
-  <div class="layout">
-    <!-- Sidebar -->
-    <div class="sidebar" :class="{ expanded: !sidebarCollapsed }">
-      <div class="sidebar-top">
-        <div class="logo">S</div>
-        <button class="toggle-btn" @click="sidebarCollapsed = !sidebarCollapsed">
-          <el-icon :size="16"><component :is="sidebarCollapsed ? Expand : Fold" /></el-icon>
+  <div class="app-shell">
+    <aside class="app-sidebar" :class="{ 'is-collapsed': sidebarCollapsed }">
+      <div class="app-sidebar__brand">
+        <button class="brand-mark" type="button" @click="router.push('/')">SA</button>
+        <div v-if="!sidebarCollapsed" class="brand-copy">
+          <strong>Social Auto Upload</strong>
+          <span>内容分发工作台</span>
+        </div>
+        <button class="sidebar-toggle" type="button" @click="sidebarCollapsed = !sidebarCollapsed">
+          <el-icon><component :is="sidebarCollapsed ? Expand : Fold" /></el-icon>
         </button>
       </div>
 
-      <div class="sidebar-nav">
-        <template v-for="item in navItems" :key="item.path">
-          <el-tooltip v-if="sidebarCollapsed" :content="item.title" effect="dark" placement="right">
-            <div
-              class="nav-item"
-              :class="{ active: activeMenu === item.path }"
-              @click="router.push(item.path)"
-            >
-              <el-icon :size="20"><component :is="item.icon" /></el-icon>
-            </div>
-          </el-tooltip>
-          <div
-            v-else
-            class="nav-item expanded-item"
-            :class="{ active: activeMenu === item.path }"
-            @click="router.push(item.path)"
-          >
-            <el-icon :size="20"><component :is="item.icon" /></el-icon>
-            <span class="nav-label">{{ item.title }}</span>
-          </div>
-        </template>
-      </div>
-
-      <div class="sidebar-separator"></div>
-
-      <div class="sidebar-bottom">
-        <el-tooltip v-if="sidebarCollapsed" :content="settingsItem.title" effect="dark" placement="right">
-          <div
-            class="nav-item"
-            :class="{ active: activeMenu === settingsItem.path }"
-            @click="router.push(settingsItem.path)"
-          >
-            <el-icon :size="20"><component :is="settingsItem.icon" /></el-icon>
-          </div>
-        </el-tooltip>
-        <div
-          v-else
-          class="nav-item expanded-item"
-          :class="{ active: activeMenu === settingsItem.path }"
-          @click="router.push(settingsItem.path)"
+      <nav class="sidebar-nav">
+        <button
+          v-for="item in primaryNavItems"
+          :key="item.path"
+          class="sidebar-nav__item"
+          :class="{ 'is-active': activeMenu === item.path }"
+          type="button"
+          @click="router.push(item.path)"
         >
-          <el-icon :size="20"><component :is="settingsItem.icon" /></el-icon>
-          <span class="nav-label">{{ settingsItem.title }}</span>
-        </div>
-      </div>
-    </div>
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span v-if="!sidebarCollapsed">{{ item.title }}</span>
+        </button>
+      </nav>
 
-    <!-- Right area -->
-    <div class="main-area">
-      <!-- Header -->
-      <header class="header">
-        <div class="breadcrumb">{{ pageTitle }}</div>
-        <div class="header-right"></div>
+      <div class="sidebar-nav sidebar-nav--secondary">
+        <button
+          v-for="item in secondaryNavItems"
+          :key="item.path"
+          class="sidebar-nav__item"
+          :class="{ 'is-active': activeMenu === item.path }"
+          type="button"
+          @click="router.push(item.path)"
+        >
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span v-if="!sidebarCollapsed">{{ item.title }}</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <header class="app-topbar">
+        <div class="app-topbar__meta">
+          <span class="app-topbar__eyebrow">社交媒体自动上传</span>
+          <strong class="app-topbar__title">{{ pageTitle }}</strong>
+        </div>
       </header>
 
-      <!-- Content -->
-      <main class="content">
+      <main class="app-content">
         <router-view v-slot="{ Component, route }">
           <keep-alive>
-            <component
-              :is="Component"
-              v-if="route.meta?.keepAlive"
-            />
+            <component :is="Component" v-if="route.meta?.keepAlive" />
           </keep-alive>
-          <component
-            :is="Component"
-            v-if="!route.meta?.keepAlive"
-          />
+          <component :is="Component" v-if="!route.meta?.keepAlive" />
         </router-view>
       </main>
     </div>
@@ -84,229 +62,255 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  HomeFilled, User, Picture, Upload,
-  Clock, Setting, Expand, Fold, UserFilled
+  HomeFilled,
+  User,
+  Picture,
+  Upload,
+  Clock,
+  List,
+  Setting,
+  UserFilled,
+  InfoFilled,
+  Expand,
+  Fold,
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 
-const sidebarCollapsed = ref(true)
+const sidebarCollapsed = ref(false)
 
-const navItems = [
+const primaryNavItems = [
   { path: '/', icon: HomeFilled, title: '仪表盘' },
   { path: '/account-management', icon: User, title: '账号管理' },
   { path: '/material-management', icon: Picture, title: '素材管理' },
   { path: '/publish-center', icon: Upload, title: '发布中心' },
   { path: '/publish-history', icon: Clock, title: '发布历史' },
-  { path: '/author', icon: UserFilled, title: '关于作者' }
+  { path: '/task-center', icon: List, title: '任务中心' },
 ]
 
-const settingsItem = { path: '/settings', icon: Setting, title: '系统设置' }
+const secondaryNavItems = [
+  { path: '/settings', icon: Setting, title: '系统设置' },
+  { path: '/author', icon: UserFilled, title: '关于作者' },
+  { path: '/about', icon: InfoFilled, title: '关于项目' },
+]
 
 const activeMenu = computed(() => route.path)
-
-const pageTitle = computed(() => route.meta?.title || '')
+const pageTitle = computed(() => route.meta?.title || '工作台')
 </script>
 
 <style lang="scss" scoped>
 @use '@/styles/variables.scss' as *;
 
-.layout {
+.app-shell {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
+  background: transparent;
 }
 
-// ---- Sidebar ----
-.sidebar {
-  width: 64px;
-  background: rgba(255, 255, 255, 0.03);
-  border-right: 1px solid $border;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 0;
+.app-sidebar {
+  width: 248px;
   flex-shrink: 0;
-  transition: width $transition-slow;
-  overflow: hidden;
-
-  &.expanded {
-    width: 200px;
-    align-items: stretch;
-    padding: 12px 12px;
-
-    .sidebar-top {
-      justify-content: space-between;
-      padding-right: 0;
-    }
-
-    .sidebar-nav {
-      align-items: stretch;
-    }
-
-    .nav-item.expanded-item {
-      width: 100%;
-      justify-content: flex-start;
-      padding: 0 12px;
-
-      .nav-label {
-        display: inline;
-        margin-left: 12px;
-      }
-    }
-
-    .sidebar-bottom {
-      align-items: stretch;
-    }
-
-    .sidebar-separator {
-      margin: 8px 0;
-      width: 100%;
-    }
-  }
-
-  .sidebar-top {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-right: 12px;
-    gap: 4px;
-
-    .logo {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: $gradient-brand;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: 700;
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-  }
-
-  .toggle-btn {
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: $radius-sm;
-    background: transparent;
-    color: $text-muted;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: $transition-base;
-    flex-shrink: 0;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.06);
-      color: $text-secondary;
-    }
-  }
-
-  .sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    flex: 1;
-  }
-
-  .sidebar-separator {
-    height: 1px;
-    background: $border;
-    margin: 8px 12px;
-    width: calc(100% - 24px);
-  }
-
-  .sidebar-bottom {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .nav-item {
-    width: 40px;
-    height: 40px;
-    border-radius: $radius-base;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: $transition-base;
-    color: $text-muted;
-    white-space: nowrap;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.06);
-      color: $text-secondary;
-    }
-
-    &.active {
-      background: $gradient-brand;
-      color: #fff;
-    }
-
-    .nav-label {
-      display: none;
-      font-size: 13px;
-      font-weight: 500;
-    }
-  }
-}
-
-// ---- Main Area ----
-.main-area {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: $spacing-md;
+  padding: $spacing-lg $spacing-md;
+  border-right: 1px solid $border;
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(18px);
+  position: sticky;
+  top: 0;
+  height: 100vh;
 
-  .content {
-    flex: 1;
-    background: $bg-base;
-    padding: 0;
-    overflow-y: auto;
+  &.is-collapsed {
+    width: 88px;
+
+    .app-sidebar__brand {
+      justify-content: center;
+      gap: $spacing-sm;
+    }
+
+    .sidebar-toggle {
+      position: absolute;
+      right: 12px;
+      top: 18px;
+    }
+
+    .sidebar-nav__item {
+      justify-content: center;
+      padding-inline: 0;
+    }
   }
 }
 
-.header {
-  height: 48px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid $border;
-  padding: 0 24px;
+.app-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm;
+}
+
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: $radius-card;
+  background: $gradient-brand;
+  color: var(--color-text-inverse);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong {
+    font-size: 15px;
+    color: $text-primary;
+  }
+
+  span {
+    font-size: 12px;
+    color: $text-muted;
+  }
+}
+
+.sidebar-toggle {
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border-radius: $radius-sm;
+  color: $text-secondary;
+  transition: background-color $transition-base, color $transition-base;
+
+  &:hover {
+    background: $bg-surface;
+    color: $brand-start;
+  }
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  &--secondary {
+    margin-top: auto;
+    padding-top: $spacing-md;
+    border-top: 1px solid $border-light;
+  }
+}
+
+.sidebar-nav__item {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-height: 42px;
+  padding: 0 $spacing-md;
+  border-radius: $radius-base;
+  color: $text-secondary;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  transition:
+    background-color $transition-base,
+    color $transition-base,
+    box-shadow $transition-base;
+
+  &:hover {
+    background: rgba($brand-start, 0.08);
+    color: $text-primary;
+  }
+
+  &.is-active {
+    color: $brand-start;
+    background: rgba($brand-start, 0.1);
+    box-shadow: inset 0 0 0 1px rgba($brand-start, 0.14);
+  }
+
+  .el-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-shrink: 0;
+  min-height: 72px;
+  padding: 0 $spacing-xl;
+  border-bottom: 1px solid $border-light;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(14px);
+}
 
-  .breadcrumb {
-    color: $text-primary;
-    font-size: 15px;
-    font-weight: 600;
+.app-topbar__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-topbar__eyebrow {
+  font-size: 12px;
+  color: $text-muted;
+}
+
+.app-topbar__title {
+  font-size: 18px;
+  color: $text-primary;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+@media (max-width: 1024px) {
+  .app-shell {
+    flex-direction: column;
   }
 
-  .header-right {
-    // placeholder for future user area
+  .app-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid $border-light;
   }
-}
 
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: opacity 150ms ease, transform 150ms ease;
-}
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(8px);
-}
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
+  .app-sidebar.is-collapsed {
+    width: 100%;
+
+    .sidebar-nav__item {
+      justify-content: flex-start;
+      padding-inline: $spacing-md;
+    }
+  }
+
+  .sidebar-nav,
+  .sidebar-nav--secondary {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .app-topbar {
+    padding-inline: $spacing-lg;
+  }
 }
 </style>

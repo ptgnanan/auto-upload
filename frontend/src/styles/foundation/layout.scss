@@ -1,0 +1,24 @@
+.surface-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+.surface-card--soft {
+  background: var(--card-bg-soft);
+}
+
+.surface-toolbar {
+  background: var(--toolbar-bg);
+  border: 1px solid var(--toolbar-border);
+  border-radius: var(--card-radius);
+  padding: var(--toolbar-padding-y) var(--toolbar-padding-x);
+  box-shadow: var(--shadow-xs);
+}
+
+.surface-empty {
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--card-radius);
+  background: var(--color-surface-soft);
+}

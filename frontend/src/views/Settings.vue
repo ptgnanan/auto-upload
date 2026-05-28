@@ -1,98 +1,91 @@
 <template>
-  <div class="settings-page" v-loading="loading">
-    <h1 class="page-title">系统设置</h1>
-    <p class="page-subtitle">配置应用偏好</p>
-
-    <!-- 代理设置 -->
-    <div class="settings-card">
-      <h3 class="card-title">
-        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        网络代理
-      </h3>
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">HTTP 代理地址</span>
-          <span class="setting-desc">用于 YouTube、TikTok 等海外平台的浏览器连接，国内平台无需代理</span>
-        </div>
-        <div class="setting-control">
-          <el-input
-            v-model="settings.proxyUrl"
-            placeholder="http://127.0.0.1:7897"
-            style="width: 300px"
-            clearable
-          />
-        </div>
+  <section class="page-shell settings-page" v-loading="loading">
+    <header class="page-header">
+      <div class="page-header__main">
+        <h1 class="page-title">系统设置</h1>
+        <p class="page-subtitle">配置应用偏好与运行模式</p>
       </div>
-      <div class="proxy-platforms">
-        <span class="proxy-tag" v-for="p in overseasPlatforms" :key="p.key">
-          <img :src="p.logo" :alt="p.name" class="proxy-tag-logo" />
-          {{ p.name }}
-        </span>
-      </div>
-    </div>
+    </header>
 
-    <!-- 引擎模式 -->
-    <div class="settings-card">
-      <h3 class="card-title">
-        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        引擎模式
-      </h3>
-      <div class="setting-row">
-        <div class="setting-info">
-          <span class="setting-label">发布引擎</span>
-          <span class="setting-desc">新版引擎使用抽象化平台架构，便于维护和扩展。切换后立即生效。</span>
+    <div class="page-content">
+      <section class="section-card">
+        <div class="section-card__header">
+          <h2 class="section-title">网络代理</h2>
+          <p class="section-subtitle">用于海外平台浏览器连接，国内平台无需代理。</p>
         </div>
-        <div class="setting-control">
-          <el-radio-group v-model="settings.engineMode">
+        <div class="section-card__body">
+          <div class="setting-row">
+            <div class="setting-copy">
+              <strong class="setting-label">HTTP 代理地址</strong>
+              <span class="setting-desc">示例：`http://127.0.0.1:7897`</span>
+            </div>
+            <div class="setting-control">
+              <el-input v-model="settings.proxyUrl" placeholder="http://127.0.0.1:7897" clearable />
+            </div>
+          </div>
+          <div class="platform-chip-row">
+            <span class="platform-chip" v-for="p in overseasPlatforms" :key="p.key">
+              <img :src="p.logo" :alt="p.name" class="platform-chip__logo" />
+              {{ p.name }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-card__header">
+          <h2 class="section-title">发布引擎</h2>
+          <p class="section-subtitle">新版引擎使用抽象化平台架构，切换后立即生效。</p>
+        </div>
+        <div class="section-card__body">
+          <el-radio-group v-model="settings.engineMode" class="engine-mode-group">
             <el-radio value="old">旧版引擎 (legacy)</el-radio>
             <el-radio value="new">新版引擎 (v2)</el-radio>
           </el-radio-group>
         </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-card__header">
+          <h2 class="section-title">技术栈</h2>
+          <p class="section-subtitle">当前项目前后端与浏览器运行时版本。</p>
+        </div>
+        <div class="section-card__body tech-grid">
+          <div class="tech-section">
+            <strong class="tech-section__title">前端</strong>
+            <div class="tech-item" v-for="item in frontendStack" :key="item.name">
+              <span>{{ item.name }}</span>
+              <code>{{ item.version }}</code>
+            </div>
+          </div>
+          <div class="tech-section">
+            <strong class="tech-section__title">后端</strong>
+            <div class="tech-item" v-for="item in backendStack" :key="item.name">
+              <span>{{ item.name }}</span>
+              <code>{{ item.version }}</code>
+            </div>
+          </div>
+          <div class="tech-section">
+            <strong class="tech-section__title">浏览器引擎</strong>
+            <div class="tech-item" v-for="item in browserStack" :key="item.name">
+              <span>{{ item.name }}</span>
+              <code>{{ item.version }}</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="settings-actions">
+        <el-button type="primary" :loading="saving" @click="handleSave">
+          {{ saving ? '保存中...' : '保存设置' }}
+        </el-button>
       </div>
     </div>
-
-    <!-- 关于系统 -->
-    <div class="settings-card">
-      <h3 class="card-title">
-        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        技术栈
-      </h3>
-      <div class="tech-grid">
-        <div class="tech-section">
-          <h4 class="tech-section-title">前端</h4>
-          <div class="tech-item" v-for="item in frontendStack" :key="item.name">
-            <span class="tech-name">{{ item.name }}</span>
-            <span class="tech-version">{{ item.version }}</span>
-          </div>
-        </div>
-        <div class="tech-section">
-          <h4 class="tech-section-title">后端</h4>
-          <div class="tech-item" v-for="item in backendStack" :key="item.name">
-            <span class="tech-name">{{ item.name }}</span>
-            <span class="tech-version">{{ item.version }}</span>
-          </div>
-        </div>
-        <div class="tech-section">
-          <h4 class="tech-section-title">浏览器引擎</h4>
-          <div class="tech-item" v-for="item in browserStack" :key="item.name">
-            <span class="tech-name">{{ item.name }}</span>
-            <span class="tech-version">{{ item.version }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Save button -->
-    <div class="save-bar">
-      <button class="save-btn" :disabled="saving" @click="handleSave">
-        {{ saving ? '保存中...' : '保存设置' }}
-      </button>
-    </div>
-  </div>
+  </section>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { settingsApi } from '@/api/v2'
 import { platformList } from '@/config/platforms'
@@ -105,10 +98,8 @@ const settings = reactive({
   engineMode: 'old',
 })
 
-// 海外平台列表
-const overseasPlatforms = platformList.filter(p => ['youtube', 'tiktok'].includes(p.key))
+const overseasPlatforms = platformList.filter(platform => ['youtube', 'tiktok'].includes(platform.key))
 
-// 技术栈版本
 const frontendStack = [
   { name: 'Vue', version: '3.5.x' },
   { name: 'Element Plus', version: '2.9.x' },
@@ -131,13 +122,13 @@ const browserStack = [
 const fetchSettings = async () => {
   loading.value = true
   try {
-    const res = await settingsApi.getSettings()
-    if (res.code === 200 && res.data) {
-      if (res.data.proxyUrl !== undefined) settings.proxyUrl = res.data.proxyUrl
-      if (res.data.engineMode !== undefined) settings.engineMode = res.data.engineMode
+    const response = await settingsApi.getSettings()
+    if (response.code === 200 && response.data) {
+      if (response.data.proxyUrl !== undefined) settings.proxyUrl = response.data.proxyUrl
+      if (response.data.engineMode !== undefined) settings.engineMode = response.data.engineMode
     }
-  } catch (e) {
-    console.error(e)
+  } catch (error) {
+    console.error(error)
   } finally {
     loading.value = false
   }
@@ -146,16 +137,16 @@ const fetchSettings = async () => {
 const handleSave = async () => {
   saving.value = true
   try {
-    const res = await settingsApi.updateSettings({
+    const response = await settingsApi.updateSettings({
       proxyUrl: settings.proxyUrl,
       engineMode: settings.engineMode,
     })
-    if (res.code === 200) {
+    if (response.code === 200) {
       ElMessage.success('设置已保存')
     } else {
-      ElMessage.error(res.msg || '保存失败')
+      ElMessage.error(response.msg || '保存失败')
     }
-  } catch (e) {
+  } catch (error) {
     ElMessage.error('保存失败')
   } finally {
     saving.value = false
@@ -171,192 +162,109 @@ onMounted(() => {
 @use '@/styles/variables.scss' as *;
 
 .settings-page {
-  padding: 0 28px;
+  .setting-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    gap: $spacing-lg;
+    align-items: center;
+  }
 
-  .page-title {
-    font-size: 24px;
-    font-weight: 600;
+  .setting-copy {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  .setting-label {
+    font-size: 15px;
     color: $text-primary;
-    margin: 0 0 8px 0;
   }
 
-  .page-subtitle {
-    font-size: 14px;
+  .setting-desc {
+    font-size: 13px;
     color: $text-secondary;
-    margin: 0 0 $spacing-lg 0;
+    line-height: 1.6;
   }
 
-  .settings-card {
-    background: $bg-elevated;
+  .platform-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+  }
+
+  .platform-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
     border: 1px solid $border;
-    border-radius: $radius-card;
-    padding: $spacing-lg;
-    margin-bottom: $spacing-md;
-
-    .card-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 16px;
-      font-weight: 600;
-      color: $text-primary;
-      margin: 0 0 $spacing-lg 0;
-      padding-bottom: $spacing-sm;
-      border-bottom: 1px solid $border;
-
-      .title-icon {
-        width: 20px;
-        height: 20px;
-        color: $text-secondary;
-      }
-    }
-
-    .setting-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-
-      &:not(:last-child) {
-        border-bottom: 1px solid $border-light;
-      }
-
-      .setting-info {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        flex: 1;
-
-        .setting-label {
-          font-size: 14px;
-          color: $text-primary;
-          font-weight: 500;
-        }
-
-        .setting-desc {
-          font-size: 12px;
-          color: $text-muted;
-          line-height: 1.5;
-        }
-      }
-
-      .setting-control {
-        flex-shrink: 0;
-        margin-left: $spacing-lg;
-      }
-    }
-
-    .proxy-platforms {
-      display: flex;
-      gap: $spacing-sm;
-      margin-top: $spacing-sm;
-      padding-left: 4px;
-
-      .proxy-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 14px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-        background: $bg-surface;
-        border: 1px solid $border;
-        color: $text-secondary;
-
-        .proxy-tag-logo {
-          width: 16px;
-          height: 16px;
-          border-radius: 3px;
-        }
-      }
-    }
+    background: $bg-surface;
+    color: $text-secondary;
+    font-size: 12px;
+    font-weight: 600;
   }
 
-  // ── Tech stack section ──
+  .platform-chip__logo {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+
+  .engine-mode-group {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    align-items: flex-start;
+  }
+
   .tech-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: $spacing-lg;
+  }
 
-    @media (max-width: 768px) {
-      grid-template-columns: 1fr;
-    }
+  .tech-section {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
 
-    .tech-section {
-      .tech-section-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: $text-muted;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin: 0 0 $spacing-sm 0;
-      }
+  .tech-section__title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: $text-muted;
+  }
 
-      .tech-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-        border-bottom: 1px solid $border-light;
+  .tech-item {
+    display: flex;
+    justify-content: space-between;
+    gap: $spacing-md;
+    padding: 10px 0;
+    border-bottom: 1px solid $border-light;
+    color: $text-primary;
+    font-size: 14px;
 
-        &:last-child {
-          border-bottom: none;
-        }
-
-        .tech-name {
-          font-size: 14px;
-          color: $text-primary;
-        }
-
-        .tech-version {
-          font-size: 13px;
-          color: $text-muted;
-          font-family: 'Fira Code', monospace;
-        }
-      }
+    code {
+      color: $text-secondary;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
     }
   }
 
-  .save-bar {
+  .settings-actions {
     display: flex;
     justify-content: flex-end;
-    padding: $spacing-lg 0;
+  }
 
-    .save-btn {
-      padding: 10px 32px;
-      border: none;
-      border-radius: $radius-base;
-      font-size: 14px;
-      font-weight: 500;
-      color: #fff;
-      background: $gradient-brand;
-      cursor: pointer;
-      transition: opacity $transition-base;
-
-      &:hover:not(:disabled) {
-        opacity: 0.9;
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
+  @media (max-width: 1024px) {
+    .setting-row,
+    .tech-grid {
+      grid-template-columns: 1fr;
     }
-  }
-
-  // Element Plus overrides for dark theme consistency
-  :deep(.el-input__wrapper),
-  :deep(.el-select__wrapper),
-  :deep(.el-input-number) {
-    background-color: $bg-surface;
-    box-shadow: 0 0 0 1px $border inset;
-  }
-
-  :deep(.el-input__inner),
-  :deep(.el-select__placeholder),
-  :deep(.el-input-number .el-input__inner) {
-    color: $text-primary;
   }
 }
 </style>

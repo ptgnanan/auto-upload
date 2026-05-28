@@ -1,7 +1,8 @@
 <template>
-  <div class="publish-center">
+  <section class="page-shell publish-center-page">
+    <div class="workbench-shell publish-center">
     <!-- ========== LEFT SIDEBAR ========== -->
-    <aside class="account-sidebar">
+    <aside class="account-sidebar workbench-sidebar">
       <div class="sidebar-header">
         <span class="sidebar-title">账号管理</span>
         <span class="sidebar-count">{{ totalCount }}</span>
@@ -38,8 +39,20 @@
                 }]"
                 @click="selectAccount(account, group)"
               >
-                <div class="account-avatar" :style="{ borderColor: group.color }">
-                  {{ account.name ? account.name.charAt(0) : '?' }}
+                <div class="account-avatar" :style="{ '--avatar-accent': group.color }">
+                  <img
+                    v-if="hasAccountAvatar(account)"
+                    :src="account.avatar"
+                    :alt="account.name || '账号头像'"
+                    class="account-avatar__image"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                    @error="handleAccountAvatarError(account.id)"
+                  />
+                  <span v-else class="account-avatar__fallback">
+                    {{ getAccountInitial(account.name) }}
+                  </span>
+                  <span class="account-avatar__badge">{{ group.letter }}</span>
                 </div>
                 <span class="account-name">{{ account.name }}</span>
                 <span :class="['dot', account.status === '正常' ? 'on' : 'off']"></span>
@@ -58,9 +71,9 @@
     </aside>
 
     <!-- ========== RIGHT MAIN AREA ========== -->
-    <main class="publish-main">
+    <main class="publish-main workbench-main">
       <!-- Top bar -->
-      <div class="main-header">
+      <div class="main-header workbench-topbar">
         <div class="header-left">
           <span class="page-title">发布视频</span>
           <span
@@ -453,6 +466,7 @@
         </div>
       </div>
     </main>
+    </div>
 
     <!-- ========== DIALOGS ========== -->
 
@@ -520,7 +534,26 @@
               >
                 <el-checkbox :label="account.id" class="cursor-pointer">
                   <div class="dialog-account-info">
-                    <div class="dialog-account-avatar">{{ account.name ? account.name.charAt(0) : '?' }}</div>
+                    <div
+                      class="dialog-account-avatar"
+                      :style="{ '--avatar-accent': getPlatformMeta(account.platform)?.color || '' }"
+                    >
+                      <img
+                        v-if="hasAccountAvatar(account)"
+                        :src="account.avatar"
+                        :alt="account.name || '账号头像'"
+                        class="account-avatar__image"
+                        loading="lazy"
+                        referrerpolicy="no-referrer"
+                        @error="handleAccountAvatarError(account.id)"
+                      />
+                      <span v-else class="account-avatar__fallback">
+                        {{ getAccountInitial(account.name) }}
+                      </span>
+                      <span class="account-avatar__badge">
+                        {{ getPlatformMeta(account.platform)?.letter || '?' }}
+                      </span>
+                    </div>
                     <span class="dialog-account-name">{{ account.name }}</span>
                     <span class="dialog-account-platform">{{ account.platform }}</span>
                     <span :class="['dialog-account-status', account.status === '正常' ? 'ok' : 'err']">
@@ -850,7 +883,7 @@
       style="display: none"
       @change="handleCoverFileChange"
     />
-  </div>
+  </section>
 </template>
 
 <script setup>
@@ -905,6 +938,8 @@ const currentPlatformConfig = computed(() =>
 const settingsPanelKey = computed(() =>
   `${selectedPlatform.value || 'none'}:${selectedAccountId.value || 'platform'}`
 )
+
+const brokenAccountAvatarIds = reactive(new Set())
 
 // ========== Public Config (shared across all accounts) ==========
 const commonConfig = reactive({
@@ -1222,6 +1257,25 @@ watch(form, (newVal) => {
 function getAccountName(accountId) {
   const account = accountStore.accounts.find(a => a.id === accountId)
   return account ? account.name : '未知'
+}
+
+function getPlatformMeta(platformName) {
+  return platformList.find(platform => platform.name === platformName) || null
+}
+
+function getAccountInitial(name) {
+  const normalizedName = String(name || '').trim()
+  return normalizedName ? normalizedName.charAt(0).toUpperCase() : '?'
+}
+
+function hasAccountAvatar(account) {
+  return !!account?.avatar && !brokenAccountAvatarIds.has(account.id)
+}
+
+function handleAccountAvatarError(accountId) {
+  if (accountId !== null && accountId !== undefined) {
+    brokenAccountAvatarIds.add(accountId)
+  }
 }
 
 function resetAccountOverride(accountId) {
@@ -2309,19 +2363,24 @@ onBeforeUnmount(() => {
 }
 
 // ========== Layout ==========
+.publish-center-page {
+  padding: 0;
+}
+
 .publish-center {
-  display: flex;
-  height: 100%;
-  gap: 0;
-  overflow: hidden;
+  min-height: calc(100vh - 180px);
+  gap: $spacing-lg;
+  overflow: visible;
 }
 
 // ========== LEFT SIDEBAR ==========
 .account-sidebar {
-  width: 220px;
+  width: 280px;
   flex-shrink: 0;
-  background: $bg-base;
-  border-right: 1px solid $border;
+  background: $bg-elevated;
+  border: 1px solid $border;
+  border-radius: $radius-card;
+  box-shadow: $shadow-xs;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2357,7 +2416,7 @@ onBeforeUnmount(() => {
       width: 4px;
     }
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba($text-secondary, 0.24);
       border-radius: 2px;
     }
   }
@@ -2368,8 +2427,8 @@ onBeforeUnmount(() => {
     transition: $transition-base;
 
     &.is-selected {
-      background: rgba(139, 92, 246, 0.06);
-      border: 1px solid rgba(139, 92, 246, 0.12);
+      background: rgba($brand-start, 0.08);
+      border: 1px solid rgba($brand-start, 0.14);
       margin: 2px 7px;
     }
   }
@@ -2384,7 +2443,7 @@ onBeforeUnmount(() => {
     user-select: none;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba($brand-start, 0.04);
     }
 
     .expand-icon {
@@ -2419,7 +2478,7 @@ onBeforeUnmount(() => {
     .group-count {
       font-size: 11px;
       color: $text-muted;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba($text-primary, 0.06);
       padding: 1px 6px;
       border-radius: 8px;
     }
@@ -2455,43 +2514,52 @@ onBeforeUnmount(() => {
   .account-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    border-radius: 8px;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 12px;
     transition: $transition-base;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.04);
+      background: $bg-surface;
+      border-color: rgba($brand-start, 0.14);
     }
 
     &.active {
-      background: rgba(139, 92, 246, 0.08);
+      background: rgba($brand-start, 0.08);
+      border-color: rgba($brand-start, 0.22);
     }
 
     .account-avatar {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
+      position: relative;
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(145deg, rgba($brand-start, 0.16), rgba($text-primary, 0.06));
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
-      color: $text-secondary;
-      font-weight: 600;
       flex-shrink: 0;
-      border: 2px solid transparent;
+      border: 1px solid rgba($text-primary, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
       transition: $transition-base;
 
-      &.ring {
-        border-color: $brand-start;
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+        pointer-events: none;
       }
     }
 
     .account-name {
       flex: 1;
-      font-size: 12px;
-      color: $text-secondary;
+      font-size: 13px;
+      color: $text-primary;
+      font-weight: 500;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -2529,15 +2597,57 @@ onBeforeUnmount(() => {
     }
 
     &.has-override {
-      background: rgba(255, 215, 0, 0.06);
+      background: rgba($warning-color, 0.08);
+      border-color: rgba($warning-color, 0.2);
       .account-name { font-weight: 600; }
     }
 
     .override-icon {
       font-size: 12px;
-      color: #f59e0b;
+      color: $warning-color;
       flex-shrink: 0;
     }
+  }
+
+  .account-avatar__image,
+  .account-avatar__fallback {
+    width: 100%;
+    height: 100%;
+  }
+
+  .account-avatar__image {
+    display: block;
+    object-fit: cover;
+  }
+
+  .account-avatar__fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: $text-primary;
+    letter-spacing: 0.02em;
+  }
+
+  .account-avatar__badge {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--avatar-accent, #14b8a6);
+    border: 2px solid $bg-elevated;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: $shadow-xs;
   }
 
   .sidebar-footer {
@@ -2556,7 +2666,7 @@ onBeforeUnmount(() => {
       &:hover {
         border-color: $border-active;
         color: $brand-start;
-        background: rgba(139, 92, 246, 0.06);
+        background: rgba($brand-start, 0.06);
       }
     }
   }
@@ -2568,7 +2678,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: $bg-elevated;
+  background: transparent;
   overflow: hidden;
 
   .main-header {
@@ -2576,7 +2686,10 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: space-between;
     padding: 16px 24px;
-    border-bottom: 1px solid $border;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+    box-shadow: $shadow-xs;
+    background: $bg-elevated;
     flex-shrink: 0;
 
     .header-left {
@@ -2647,13 +2760,13 @@ onBeforeUnmount(() => {
   .main-content {
     flex: 1;
     overflow-y: auto;
-    padding: 24px;
+    padding: $spacing-lg 0 0;
 
     &::-webkit-scrollbar {
       width: 6px;
     }
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba($text-secondary, 0.24);
       border-radius: 3px;
     }
   }
@@ -2699,7 +2812,8 @@ onBeforeUnmount(() => {
   border: 1px solid $border;
   border-radius: $radius-card;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  background: $bg-elevated;
+  box-shadow: $shadow-xs;
   transition: $transition-base;
 
   &:hover {
@@ -2742,7 +2856,7 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.03);
+    background: $bg-surface;
     font-size: 12px;
     font-weight: 500;
     color: $text-secondary;
@@ -2750,7 +2864,7 @@ onBeforeUnmount(() => {
     .video-ratio {
       font-size: 10px;
       color: $text-muted;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba($text-primary, 0.06);
       padding: 2px 6px;
       border-radius: 4px;
     }
@@ -2768,7 +2882,7 @@ onBeforeUnmount(() => {
     transition: $transition-base;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba($brand-start, 0.04);
       color: $brand-start;
       .video-card-empty-text { color: $brand-start; }
     }
@@ -2797,11 +2911,11 @@ onBeforeUnmount(() => {
       .overlay-btn {
         padding: 3px 10px;
         border: none; border-radius: 4px;
-        background: rgba(255,255,255,0.15);
+        background: rgba(255, 255, 255, 0.18);
         color: #fff; font-size: 12px;
         cursor: pointer; transition: $transition-fast;
         outline: none; font-family: inherit;
-        &:hover { background: rgba(255,255,255,0.25); }
+        &:hover { background: rgba(255, 255, 255, 0.28); }
         &.danger:hover { background: rgba($danger-color,0.6); }
       }
     }
@@ -2812,7 +2926,7 @@ onBeforeUnmount(() => {
     display: flex;
     gap: 8px;
     padding: 8px 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid $border-light;
     .cover-action-btn { flex: 1; }
   }
 }
@@ -2844,7 +2958,7 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.03);
+    background: $bg-surface;
     font-size: 12px;
     font-weight: 500;
     color: $text-secondary;
@@ -2852,7 +2966,7 @@ onBeforeUnmount(() => {
     .cover-ratio {
       font-size: 10px;
       color: $text-muted;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba($text-primary, 0.06);
       padding: 2px 6px;
       border-radius: 4px;
     }
@@ -2870,7 +2984,7 @@ onBeforeUnmount(() => {
     transition: $transition-base;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba($brand-start, 0.04);
       color: $brand-start;
 
       .cover-empty-text {
@@ -2888,7 +3002,7 @@ onBeforeUnmount(() => {
     display: flex;
     gap: 8px;
     padding: 8px 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid $border-light;
 
     .cover-action-btn {
       flex: 1;
@@ -2925,7 +3039,7 @@ onBeforeUnmount(() => {
         padding: 3px 10px;
         border: none;
         border-radius: 4px;
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.18);
         color: #fff;
         font-size: 12px;
         cursor: pointer;
@@ -2934,7 +3048,7 @@ onBeforeUnmount(() => {
         font-family: inherit;
 
         &:hover {
-          background: rgba(255, 255, 255, 0.25);
+          background: rgba(255, 255, 255, 0.28);
         }
 
         &.danger:hover {
@@ -2956,7 +3070,7 @@ onBeforeUnmount(() => {
   padding: 6px 14px;
   border: 1px solid $border;
   border-radius: $radius-sm;
-  background: rgba(255, 255, 255, 0.03);
+  background: $bg-elevated;
   color: $text-secondary;
   font-size: 12px;
   cursor: pointer;
@@ -3034,7 +3148,7 @@ onBeforeUnmount(() => {
 
   :deep(.el-input__wrapper),
   :deep(.el-textarea__inner) {
-    background: rgba(255, 255, 255, 0.03);
+    background: $bg-elevated;
     border: 1px solid $border;
     border-radius: $radius-base;
     box-shadow: none;
@@ -3112,7 +3226,7 @@ onBeforeUnmount(() => {
 
     &:hover {
       color: $text-primary;
-      background: rgba(255, 255, 255, 0.02);
+      background: $bg-surface;
     }
   }
 
@@ -3167,7 +3281,7 @@ onBeforeUnmount(() => {
 
   :deep(.el-input__wrapper),
   :deep(.el-select .el-input__wrapper) {
-    background: rgba(255, 255, 255, 0.03);
+    background: $bg-elevated;
     border: 1px solid $border;
     border-radius: $radius-sm;
     box-shadow: none;
@@ -3204,7 +3318,7 @@ onBeforeUnmount(() => {
       &.on {
         border-color: $brand-start;
         color: $brand-start;
-        background: rgba(139, 92, 246, 0.06);
+        background: rgba($brand-start, 0.08);
       }
     }
 
@@ -3268,7 +3382,7 @@ onBeforeUnmount(() => {
       width: 140px;
       flex-shrink: 0;
       border-right: 1px solid $border;
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba($text-primary, 0.04);
       overflow-y: auto;
 
       .dialog-platform-item {
@@ -3281,11 +3395,11 @@ onBeforeUnmount(() => {
         transition: $transition-base;
 
         &:hover {
-          background: rgba(255, 255, 255, 0.03);
+          background: $bg-surface;
         }
 
         &.active {
-          background: rgba(139, 92, 246, 0.08);
+          background: rgba($brand-start, 0.08);
           color: $text-primary;
           font-weight: 500;
         }
@@ -3317,7 +3431,7 @@ onBeforeUnmount(() => {
         margin-bottom: 4px;
 
         &:hover {
-          background: rgba(255, 255, 255, 0.03);
+          background: $bg-surface;
         }
 
         &.disabled {
@@ -3328,20 +3442,21 @@ onBeforeUnmount(() => {
       .dialog-account-info {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
 
         .dialog-account-avatar {
-          width: 26px;
-          height: 26px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.08);
+          position: relative;
+          width: 34px;
+          height: 34px;
+          border-radius: 12px;
+          overflow: hidden;
+          background: linear-gradient(145deg, rgba($brand-start, 0.14), rgba($text-primary, 0.06));
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 11px;
-          color: $text-secondary;
-          font-weight: 600;
           flex-shrink: 0;
+          border: 1px solid rgba($text-primary, 0.08);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
 
         .dialog-account-name {
@@ -3440,7 +3555,7 @@ onBeforeUnmount(() => {
     :deep(.el-upload-dragger) {
       width: 100%;
       height: 180px;
-      background: rgba(255, 255, 255, 0.02);
+      background: $bg-surface;
       border-color: $border;
       display: flex;
       flex-direction: column;

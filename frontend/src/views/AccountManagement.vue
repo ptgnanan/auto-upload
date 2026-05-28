@@ -1,126 +1,125 @@
 <template>
-  <div class="account-management">
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-text">
-          <h1>账号管理</h1>
-          <p class="page-subtitle">管理所有平台账号</p>
-        </div>
-        <el-button type="primary" class="add-btn" @click="handleAddAccount">
+  <section class="page-shell account-management">
+    <header class="page-header">
+      <div class="page-header__main">
+        <h1 class="page-title">账号管理</h1>
+        <p class="page-subtitle">管理所有平台账号</p>
+      </div>
+      <div class="page-header__actions">
+        <el-button type="primary" @click="handleAddAccount">
           <el-icon><Plus /></el-icon>
           添加账号
         </el-button>
       </div>
-    </div>
+    </header>
 
-    <!-- 平台筛选标签 -->
-    <div class="platform-tabs">
-      <button
-        v-for="tab in filterOptions"
-        :key="tab.value"
-        :class="['tab-item', { active: activeTab === tab.value }]"
-        @click="activeTab = tab.value"
-      >
-        <span class="tab-label">{{ tab.label }}</span>
-        <span v-if="tab.count" class="tab-count">{{ tab.count }}</span>
-      </button>
-    </div>
+    <div class="page-content">
+      <section class="section-card">
+        <div class="section-card__body filter-panel">
+          <div class="platform-tabs">
+            <button
+              v-for="tab in filterOptions"
+              :key="tab.value"
+              :class="['tab-item', { active: activeTab === tab.value }]"
+              @click="activeTab = tab.value"
+            >
+              <span>{{ tab.label }}</span>
+              <span v-if="tab.count" class="tab-count">{{ tab.count }}</span>
+            </button>
+          </div>
 
-    <!-- 搜索栏 -->
-    <div class="search-bar">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索名称或账号..."
-        prefix-icon="Search"
-        clearable
-        class="search-input"
-      />
-      <el-button class="refresh-btn" @click="fetchAccountsQuick" :loading="appStore.isAccountRefreshing">
-        <el-icon><Refresh /></el-icon>
-        刷新
-      </el-button>
-      <el-button class="check-all-btn" @click="fetchAccounts" :loading="appStore.isAccountRefreshing">
-        <el-icon v-if="!appStore.isAccountRefreshing"><Loading /></el-icon>
-        批量检查
-      </el-button>
-    </div>
+          <div class="page-toolbar">
+            <div class="page-toolbar__group page-toolbar__group--grow">
+              <el-input v-model="searchKeyword" placeholder="搜索名称或账号..." clearable class="search-input" />
+            </div>
+            <div class="page-toolbar__group">
+              <el-button @click="fetchAccountsQuick" :loading="appStore.isAccountRefreshing">
+                <el-icon><Refresh /></el-icon>
+                刷新
+              </el-button>
+              <el-button @click="fetchAccounts" :loading="appStore.isAccountRefreshing">
+                <el-icon v-if="!appStore.isAccountRefreshing"><Loading /></el-icon>
+                批量检查
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <!-- 账号卡片列表 -->
-    <div v-if="filteredAccounts.length > 0" class="account-grid">
-      <div
-        v-for="account in filteredAccounts"
-        :key="account.id"
-        :class="['account-card', `platform-${getPlatformClass(account.platform)}`]"
-      >
-        <!-- 卡片主体：头像 + 用户信息 -->
-        <div class="card-body">
-          <el-avatar :src="account.avatar || getDefaultAvatar(account.name)" :size="48" class="user-avatar" />
-          <div class="user-info">
-            <span class="user-name">{{ account.name }}</span>
-            <div class="platform-row">
-              <span class="platform-name">{{ account.platform }}</span>
-              <span :class="['status-badge', getStatusClass(account.status)]">
-                <span class="status-dot"></span>
-                {{ account.status }}
+      <section v-if="filteredAccounts.length > 0" class="account-grid">
+        <article
+          v-for="account in filteredAccounts"
+          :key="account.id"
+          :class="['account-card', `platform-${getPlatformClass(account.platform)}`]"
+        >
+          <div class="account-card__main">
+            <el-avatar :src="account.avatar || getDefaultAvatar(account.name)" :size="48" class="user-avatar" />
+            <div class="account-card__copy">
+              <strong class="account-name">{{ account.name }}</strong>
+              <div class="account-meta">
+                <span class="platform-name">{{ account.platform }}</span>
+                <span :class="['status-badge', getStatusClass(account.status)]">
+                  <span class="status-dot"></span>
+                  {{ account.status }}
+                </span>
+              </div>
+            </div>
+            <div class="platform-logo">
+              <img v-if="getPlatformLogo(account.platform)" :src="getPlatformLogo(account.platform)" :alt="account.platform" class="platform-icon" />
+              <span v-else class="platform-letter" :style="{ color: getPlatformColor(account.platform) }">
+                {{ getPlatformLetter(account.platform) }}
               </span>
             </div>
           </div>
-          <div class="platform-logo">
-            <img v-if="getPlatformLogo(account.platform)" :src="getPlatformLogo(account.platform)" :alt="account.platform" class="platform-icon" />
-            <span v-else class="platform-letter" :style="{ color: getPlatformColor(account.platform) }">
-              {{ getPlatformLetter(account.platform) }}
-            </span>
-          </div>
-        </div>
 
-        <!-- 卡片底部：操作按钮 -->
-        <div class="card-footer">
-          <div class="card-actions">
-            <button class="action-btn check" @click="handleCheckAccount(account)" :disabled="checkingIds.has(account.id)">
-              <el-icon v-if="checkingIds.has(account.id)" class="is-loading"><Loading /></el-icon>
-              <template v-else>
-                <el-icon><Check /></el-icon>
-                检查
-              </template>
+          <div class="account-card__actions">
+            <button class="action-btn action-btn--success" @click="handleCheckAccount(account)" :disabled="checkingIds.has(account.id)">
+              <span class="action-btn__icon">
+                <el-icon v-if="checkingIds.has(account.id)" class="is-loading"><Loading /></el-icon>
+                <el-icon v-else><Check /></el-icon>
+              </span>
+              <span class="action-btn__label">检查</span>
             </button>
-            <button class="action-btn sync" @click="handleSyncProfile(account)" :disabled="syncingIds.has(account.id)">
-              <el-icon v-if="syncingIds.has(account.id)" class="is-loading"><Loading /></el-icon>
-              <template v-else>
-                <el-icon><Refresh /></el-icon>
-                同步
-              </template>
+            <button class="action-btn action-btn--info" @click="handleSyncProfile(account)" :disabled="syncingIds.has(account.id)">
+              <span class="action-btn__icon">
+                <el-icon v-if="syncingIds.has(account.id)" class="is-loading"><Loading /></el-icon>
+                <el-icon v-else><Refresh /></el-icon>
+              </span>
+              <span class="action-btn__label">同步</span>
             </button>
-            <button class="action-btn creator" @click="handleOpenCreatorCenter(account)">
-              <el-icon><Link /></el-icon>
-              创作中心
+            <button class="action-btn action-btn--teal" @click="handleOpenCreatorCenter(account)">
+              <span class="action-btn__icon">
+                <el-icon><Link /></el-icon>
+              </span>
+              <span class="action-btn__label">创作中心</span>
             </button>
-            <button class="action-btn delete" @click="handleDelete(account)">
-              <el-icon><Delete /></el-icon>
-              删除
+            <button class="action-btn action-btn--danger" @click="handleDelete(account)">
+              <span class="action-btn__icon">
+                <el-icon><Delete /></el-icon>
+              </span>
+              <span class="action-btn__label">删除</span>
             </button>
           </div>
+        </article>
+      </section>
+
+      <div v-else class="empty-state">
+        <div class="empty-state__inner">
+          <el-icon class="empty-state__icon"><Folder /></el-icon>
+          <strong class="empty-state__title">{{ searchKeyword ? '未找到匹配账号' : '暂无账号数据' }}</strong>
+          <p class="empty-state__text">{{ searchKeyword ? '请尝试其他关键词搜索。' : '点击上方“添加账号”开始绑定你的第一个平台账号。' }}</p>
+          <el-button v-if="!searchKeyword" type="primary" @click="handleAddAccount">
+            <el-icon><Plus /></el-icon>
+            添加账号
+          </el-button>
         </div>
       </div>
     </div>
 
-    <!-- 空状态 -->
-    <div v-else class="empty-state">
-      <div class="empty-content">
-        <el-icon class="empty-icon"><Folder /></el-icon>
-        <h3>{{ searchKeyword ? '未找到匹配账号' : '暂无账号数据' }}</h3>
-        <p>{{ searchKeyword ? '请尝试其他关键词搜索' : '点击上方"添加账号"开始绑定你的第一个平台账号' }}</p>
-        <el-button v-if="!searchKeyword" type="primary" @click="handleAddAccount">
-          <el-icon><Plus /></el-icon>
-          添加账号
-        </el-button>
-      </div>
-    </div>
-
-    <!-- 添加/编辑账号对话框 -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogType === 'add' ? '添加账号' : '编辑账号'"
-      width="500px"
+      width="560px"
       :close-on-click-modal="false"
       :close-on-press-escape="!sseConnecting"
       :show-close="!sseConnecting"
@@ -134,26 +133,16 @@
             style="width: 100%"
             @change="onPlatformSelect"
           >
-            <el-option
-              v-for="p in platformOptions"
-              :key="p.value"
-              :label="p.label"
-              :value="p.label"
-            />
+            <el-option v-for="p in platformOptions" :key="p.value" :label="p.label" :value="p.label" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="dialogType === 'edit'" label="名称" prop="name">
-          <el-input
-            v-model="accountForm.name"
-            placeholder="扫码后自动同步"
-            disabled
-          />
+          <el-input v-model="accountForm.name" placeholder="扫码后自动同步" disabled />
         </el-form-item>
 
-        <!-- 二维码显示区域 -->
         <div v-if="sseConnecting" class="qrcode-container">
           <div v-if="qrCodeData && !loginStatus" class="qrcode-wrapper">
-            <p class="qrcode-tip">请使用对应平台APP扫描二维码登录</p>
+            <p class="qrcode-tip">请使用对应平台 APP 扫描二维码登录</p>
             <img :src="qrCodeData" alt="登录二维码" class="qrcode-image" />
           </div>
           <div v-else-if="!qrCodeData && !loginStatus" class="loading-wrapper">
@@ -173,56 +162,49 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button
-            type="primary"
-            @click="submitAccountForm"
-            :loading="sseConnecting"
-            :disabled="sseConnecting"
-          >
+          <el-button type="primary" @click="submitAccountForm" :loading="sseConnecting" :disabled="sseConnecting">
             {{ sseConnecting ? '请求中' : '确认' }}
           </el-button>
         </div>
       </template>
     </el-dialog>
-  </div>
+  </section>
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { Refresh, CircleCheckFilled, CircleCloseFilled, Loading, Link, Plus, Edit, Delete, Check, Folder } from '@element-plus/icons-vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { Refresh, CircleCheckFilled, CircleCloseFilled, Loading, Link, Plus, Delete, Check, Folder } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { accountApi } from '@/api/account'
 import { useAccountStore } from '@/stores/account'
 import { useAppStore } from '@/stores/app'
 import { http } from '@/utils/request'
 import { resolveApiUrl } from '@/utils/api-runtime'
-import { platformList, platformNameToId, platformCssMap, getPlatformByName, PLATFORMS } from '@/config/platforms'
+import { platformList, platformNameToId, platformCssMap, getPlatformByName } from '@/config/platforms'
 
 const accountStore = useAccountStore()
 const appStore = useAppStore()
 
 const activeTab = ref('all')
 const searchKeyword = ref('')
-const currentPage = ref(1)
-const pageSize = ref(12)
 
 const filterOptions = computed(() => {
   const counts = {}
-  accountStore.accounts.forEach(a => {
-    counts[a.platform] = (counts[a.platform] || 0) + 1
+  accountStore.accounts.forEach(account => {
+    counts[account.platform] = (counts[account.platform] || 0) + 1
   })
   return [
     { label: '全部', value: 'all', count: accountStore.accounts.length },
-    ...platformList.map(p => ({ label: p.name, value: p.name, count: counts[p.name] || 0 }))
-  ].filter(opt => opt.value === 'all' || (opt.count && opt.count > 0))
+    ...platformList.map(platform => ({ label: platform.name, value: platform.name, count: counts[platform.name] || 0 })),
+  ].filter(option => option.value === 'all' || (option.count && option.count > 0))
 })
 
-const platformOptions = platformList.map(p => ({
-  label: p.name,
-  value: String(p.id),
-  logo: p.logo,
-  color: p.color,
-  bg: p.bgColor,
+const platformOptions = platformList.map(platform => ({
+  label: platform.name,
+  value: String(platform.id),
+  logo: platform.logo,
+  color: platform.color,
+  bg: platform.bgColor,
 }))
 
 const fetchAccountsQuick = async () => {
@@ -262,100 +244,60 @@ onMounted(() => {
   fetchAccountsQuick()
 })
 
-const getPlatformClass = (platform) => {
-  return platformCssMap[platform] || ''
-}
+const getPlatformClass = platform => platformCssMap[platform] || ''
+const getPlatformColor = platform => getPlatformByName(platform)?.color || '#14937c'
+const getPlatformLogo = platform => getPlatformByName(platform)?.logo || null
+const getPlatformLetter = platform => getPlatformByName(platform)?.letter || platform?.charAt(0) || '?'
 
-const getPlatformColor = (platform) => {
-  const p = getPlatformByName(platform)
-  return p?.color || '#8b5cf6'
-}
-
-const getPlatformBg = (platform) => {
-  const p = getPlatformByName(platform)
-  return p?.bgColor || 'rgba(139, 92, 246, 0.15)'
-}
-
-const getPlatformLogo = (platform) => {
-  const p = getPlatformByName(platform)
-  return p?.logo || null
-}
-
-const getPlatformLetter = (platform) => {
-  const p = getPlatformByName(platform)
-  return p?.letter || platform?.charAt(0) || '?'
-}
-
-const getStatusClass = (status) => {
+const getStatusClass = status => {
   if (status === '验证中') return 'pending'
   if (status === '正常') return 'normal'
   return 'error'
 }
 
-const isStatusClickable = (status) => status === '异常'
-
-const getStatusTagType = (status) => {
-  if (status === '验证中') return 'info'
-  if (status === '正常') return 'success'
-  return 'danger'
-}
-
-const handleStatusClick = (row) => {
-  if (isStatusClickable(row.status)) handleReLogin(row)
-}
-
 const filteredAccounts = computed(() => {
   let accounts = accountStore.accounts
   if (activeTab.value !== 'all') {
-    accounts = accounts.filter(a => a.platform === activeTab.value)
+    accounts = accounts.filter(account => account.platform === activeTab.value)
   }
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
-    accounts = accounts.filter(a => a.name.toLowerCase().includes(keyword))
+    accounts = accounts.filter(account => account.name.toLowerCase().includes(keyword))
   }
   return accounts
 })
 
-const paginatedAccounts = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredAccounts.value.slice(start, end)
-})
-
-watch([activeTab, searchKeyword], () => {
-  currentPage.value = 1
-})
+watch([activeTab, searchKeyword], () => {})
 
 const dialogVisible = ref(false)
 const dialogType = ref('add')
 const accountFormRef = ref(null)
-
 const accountForm = reactive({ id: null, name: '', platform: '', status: '正常' })
-
 const rules = {
-  platform: [{ required: true, message: '请选择平台', trigger: 'change' }]
+  platform: [{ required: true, message: '请选择平台', trigger: 'change' }],
 }
 
 const sseConnecting = ref(false)
 const checkingIds = ref(new Set())
 
-const handleCheckAccount = async (row) => {
+const handleCheckAccount = async row => {
   checkingIds.value.add(row.id)
   try {
     const res = await http.get('/checkAccount', { id: row.id })
     if (res.code === 200 && res.data) {
-      const { valid, status } = res.data
+      const { valid } = res.data
       accountStore.updateAccount(row.id, { ...row, status: valid ? '正常' : '失效' })
       ElMessage({ type: valid ? 'success' : 'warning', message: res.msg })
     } else {
       ElMessage.error(res.msg || '检查失败')
     }
-  } catch (e) {
+  } catch (error) {
     ElMessage.error('检查请求失败')
   } finally {
     checkingIds.value.delete(row.id)
   }
 }
+
 const qrCodeData = ref('')
 const loginStatus = ref('')
 
@@ -372,88 +314,32 @@ const handleAddAccount = () => {
   dialogVisible.value = true
 }
 
-const handleEdit = (row) => {
-  dialogType.value = 'edit'
-  Object.assign(accountForm, { id: row.id, name: row.name, platform: row.platform, status: row.status })
-  dialogVisible.value = true
-}
-
-const handleDelete = (row) => {
+const handleDelete = row => {
   ElMessageBox.confirm(`确定要删除账号 ${row.name} 吗？`, '警告', {
-    confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning',
-  }).then(async () => {
-    try {
-      const response = await accountApi.deleteAccount(row.id)
-      if (response.code === 200) {
-        accountStore.deleteAccount(row.id)
-        ElMessage({ type: 'success', message: '删除成功' })
-      } else {
-        ElMessage.error(response.msg || '删除失败')
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        const response = await accountApi.deleteAccount(row.id)
+        if (response.code === 200) {
+          accountStore.deleteAccount(row.id)
+          ElMessage.success('删除成功')
+        } else {
+          ElMessage.error(response.msg || '删除失败')
+        }
+      } catch (error) {
+        console.error('删除账号失败:', error)
+        ElMessage.error('删除账号失败')
       }
-    } catch (error) {
-      console.error('删除账号失败:', error)
-      ElMessage.error('删除账号失败')
-    }
-  }).catch(() => {})
-}
-
-const handleDownloadCookie = (row) => {
-  const downloadUrl = resolveApiUrl(`/downloadCookie?filePath=${encodeURIComponent(row.filePath)}`)
-  const link = document.createElement('a')
-  link.href = downloadUrl
-  link.download = `${row.name}_cookie.json`
-  link.target = '_blank'
-  link.style.display = 'none'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-const handleUploadCookie = (row) => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.json'
-  input.style.display = 'none'
-  document.body.appendChild(input)
-
-  input.onchange = async (event) => {
-    const file = event.target.files[0]
-    if (!file) return
-    if (!file.name.endsWith('.json')) {
-      ElMessage.error('请选择JSON格式的Cookie文件')
-      document.body.removeChild(input)
-      return
-    }
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('id', row.id)
-      formData.append('platform', row.platform)
-      await http.upload('/uploadCookie', formData)
-      ElMessage.success('Cookie文件上传成功')
-      fetchAccounts()
-    } catch (error) {
-      ElMessage.error('Cookie文件上传失败')
-    } finally {
-      document.body.removeChild(input)
-    }
-  }
-  input.click()
-}
-
-const handleReLogin = (row) => {
-  dialogType.value = 'edit'
-  Object.assign(accountForm, { id: row.id, name: row.name, platform: row.platform, status: row.status })
-  sseConnecting.value = false
-  qrCodeData.value = ''
-  loginStatus.value = ''
-  dialogVisible.value = true
-  setTimeout(() => connectSSE(row.platform), 300)
+    })
+    .catch(() => {})
 }
 
 const syncingIds = reactive(new Set())
 
-const handleSyncProfile = async (row) => {
+const handleSyncProfile = async row => {
   if (syncingIds.has(row.id)) return
   syncingIds.add(row.id)
   try {
@@ -462,7 +348,7 @@ const handleSyncProfile = async (row) => {
       accountStore.updateAccount(row.id, {
         id: row.id,
         name: res.data.name || row.name,
-        avatar: res.data.avatar || row.avatar
+        avatar: res.data.avatar || row.avatar,
       })
       ElMessage.success('资料同步成功')
     } else {
@@ -476,11 +362,9 @@ const handleSyncProfile = async (row) => {
   }
 }
 
-const getDefaultAvatar = (name) => {
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
-}
+const getDefaultAvatar = name => `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
 
-const handleOpenCreatorCenter = async (row) => {
+const handleOpenCreatorCenter = async row => {
   try {
     const res = await http.post('/openCreatorCenter', { id: row.id })
     if (res.code === 200) {
@@ -497,26 +381,27 @@ const handleOpenCreatorCenter = async (row) => {
 let eventSource = null
 
 const closeSSEConnection = () => {
-  if (eventSource) { eventSource.close(); eventSource = null }
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
+  }
 }
 
-const connectSSE = (platform) => {
+const connectSSE = platform => {
   closeSSEConnection()
   sseConnecting.value = true
   qrCodeData.value = ''
   loginStatus.value = ''
 
   const type = platformNameToId[platform] ? String(platformNameToId[platform]) : '1'
-  // 使用 UUID 作为临时标识，不再需要用户输入名称
   const tempId = crypto.randomUUID()
   const url = resolveApiUrl(`/login?type=${type}&id=${encodeURIComponent(tempId)}`)
 
   eventSource = new EventSource(url)
 
-  eventSource.onmessage = (event) => {
+  eventSource.onmessage = event => {
     const data = event.data
 
-    // 先尝试解析 JSON（登录响应）
     try {
       const result = JSON.parse(data)
       if (result.status === '200') {
@@ -528,7 +413,10 @@ const connectSSE = (platform) => {
             sseConnecting.value = false
             ElMessage.success(dialogType.value === 'edit' ? '重新登录成功' : '账号添加成功')
             ElMessage({ type: 'info', message: '正在同步账号信息...', duration: 0 })
-            fetchAccountsQuick().then(() => { ElMessage.closeAll(); ElMessage.success('账号信息已更新') })
+            fetchAccountsQuick().then(() => {
+              ElMessage.closeAll()
+              ElMessage.success('账号信息已更新')
+            })
           }, 1000)
         }, 1000)
         return
@@ -539,22 +427,24 @@ const connectSSE = (platform) => {
         sseConnecting.value = false
         qrCodeData.value = ''
         ElMessage.error(result.msg || '登录失败，请稍后再试')
-        setTimeout(() => { loginStatus.value = '' }, 2000)
+        setTimeout(() => {
+          loginStatus.value = ''
+        }, 2000)
         return
       }
-    } catch (e) {}
+    } catch {}
 
     if (data === '500') {
       loginStatus.value = '500'
       closeSSEConnection()
-      setTimeout(() => { sseConnecting.value = false; qrCodeData.value = ''; loginStatus.value = '' }, 2000)
+      setTimeout(() => {
+        sseConnecting.value = false
+        qrCodeData.value = ''
+        loginStatus.value = ''
+      }, 2000)
     } else if (!qrCodeData.value && data.length > 100) {
-      // 二维码图片
-      try {
-        qrCodeData.value = data.startsWith('data:image') ? data : `data:image/png;base64,${data}`
-      } catch (error) {}
+      qrCodeData.value = data.startsWith('data:image') ? data : `data:image/png;base64,${data}`
     } else if (data === '200') {
-      // 兼容旧格式
       loginStatus.value = '200'
       setTimeout(() => {
         closeSSEConnection()
@@ -563,13 +453,16 @@ const connectSSE = (platform) => {
           sseConnecting.value = false
           ElMessage.success(dialogType.value === 'edit' ? '重新登录成功' : '账号添加成功')
           ElMessage({ type: 'info', message: '正在同步账号信息...', duration: 0 })
-          fetchAccountsQuick().then(() => { ElMessage.closeAll(); ElMessage.success('账号信息已更新') })
+          fetchAccountsQuick().then(() => {
+            ElMessage.closeAll()
+            ElMessage.success('账号信息已更新')
+          })
         }, 1000)
       }, 1000)
     }
   }
 
-  eventSource.onerror = (error) => {
+  eventSource.onerror = error => {
     console.error('SSE连接错误:', error)
     ElMessage.error('连接服务器失败，请稍后再试')
     closeSSEConnection()
@@ -578,493 +471,381 @@ const connectSSE = (platform) => {
 }
 
 const submitAccountForm = () => {
-  accountFormRef.value.validate(async (valid) => {
-    if (valid) {
-      if (dialogType.value === 'add') {
-        connectSSE(accountForm.platform)
-      } else {
-        try {
-          const type = platformNameToId[accountForm.platform] || 1
-          const res = await accountApi.updateAccount({ id: accountForm.id, type, userName: accountForm.name })
-          if (res.code === 200) {
-            accountStore.updateAccount(accountForm.id, { id: accountForm.id, name: accountForm.name, platform: accountForm.platform, status: accountForm.status })
-            ElMessage.success('更新成功')
-            dialogVisible.value = false
-            fetchAccountsQuick()
-          } else {
-            ElMessage.error(res.msg || '更新账号失败')
-          }
-        } catch (error) {
-          console.error('更新账号失败:', error)
-          ElMessage.error('更新账号失败')
+  accountFormRef.value.validate(async valid => {
+    if (!valid) return
+
+    if (dialogType.value === 'add') {
+      connectSSE(accountForm.platform)
+    } else {
+      try {
+        const type = platformNameToId[accountForm.platform] || 1
+        const res = await accountApi.updateAccount({ id: accountForm.id, type, userName: accountForm.name })
+        if (res.code === 200) {
+          accountStore.updateAccount(accountForm.id, {
+            id: accountForm.id,
+            name: accountForm.name,
+            platform: accountForm.platform,
+            status: accountForm.status,
+          })
+          ElMessage.success('更新成功')
+          dialogVisible.value = false
+          fetchAccountsQuick()
+        } else {
+          ElMessage.error(res.msg || '更新账号失败')
         }
+      } catch (error) {
+        console.error('更新账号失败:', error)
+        ElMessage.error('更新账号失败')
       }
     }
   })
 }
 
-onBeforeUnmount(() => { closeSSEConnection() })
+onBeforeUnmount(() => {
+  closeSSEConnection()
+})
 </script>
 
 <style lang="scss" scoped>
+@use 'sass:color';
 @use '@/styles/variables.scss' as *;
 
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
 .account-management {
-  padding: 24px;
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  box-sizing: border-box;
-
-  .page-header {
-    margin-bottom: 24px;
-
-    .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
-    h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: $text-primary;
-      margin: 0;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .page-subtitle {
-      margin: 8px 0 0;
-      font-size: 14px;
-      color: $text-muted;
-      font-weight: 400;
-    }
-
-    .add-btn {
-      background: $gradient-brand;
-      border: none;
-      padding: 10px 20px;
-      font-weight: 600;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px rgba($brand-start, 0.3);
-      transition: all $transition-base;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba($brand-start, 0.4);
-      }
-    }
+  .filter-panel {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
   }
 
-  // Platform tabs
   .platform-tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
     flex-wrap: wrap;
-
-    .tab-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      background: $bg-surface;
-      border: 1px solid $border;
-      border-radius: 10px;
-      color: $text-secondary;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all $transition-base;
-
-      &:hover {
-        background: rgba($brand-start, 0.1);
-        border-color: rgba($brand-start, 0.3);
-        color: $text-primary;
-      }
-
-      &.active {
-        background: rgba($brand-start, 0.15);
-        border-color: $brand-start;
-        color: #fff;
-        box-shadow: 0 0 20px rgba($brand-start, 0.2);
-      }
-
-      .tab-count {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 12px;
-      }
-
-      &.active .tab-count {
-        background: rgba(255, 255, 255, 0.2);
-      }
-    }
+    gap: $spacing-sm;
   }
 
-  // Search bar
-  .search-bar {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 24px;
+  .tab-item {
+    display: inline-flex;
     align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid $border;
+    background: $bg-elevated;
+    color: $text-secondary;
+    font-size: 13px;
+    font-weight: 600;
 
-    .search-input {
-      flex: 1;
-      max-width: 320px;
-
-      :deep(.el-input__wrapper) {
-        background: $bg-surface;
-        border: 1px solid $border;
-        border-radius: 10px;
-        box-shadow: none;
-        padding: 4px 16px;
-
-        &:hover, &.is-focus {
-          border-color: rgba($brand-start, 0.5);
-          box-shadow: 0 0 0 3px rgba($brand-start, 0.1);
-        }
-      }
-    }
-
-    .refresh-btn, .check-all-btn {
-      background: $bg-surface;
-      border: 1px solid $border;
-      border-radius: 10px;
-      color: $text-secondary;
-      padding: 8px 16px;
-      transition: all $transition-base;
-
-      &:hover {
-        background: rgba($brand-start, 0.1);
-        border-color: rgba($brand-start, 0.3);
-        color: $text-primary;
-      }
+    &.active {
+      border-color: $border-active;
+      background: rgba($brand-start, 0.08);
+      color: $brand-start;
     }
   }
 
-  // Account grid
+  .tab-count {
+    display: inline-flex;
+    min-width: 22px;
+    min-height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba($text-primary, 0.06);
+    font-size: 12px;
+  }
+
+  .search-input {
+    max-width: 320px;
+  }
+
   .account-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 20px;
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    overflow-y: visible;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: $border;
-      border-radius: 3px;
-    }
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: $spacing-lg;
   }
 
-  // Account card
   .account-card {
-    background: $bg-surface;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    padding: $spacing-lg;
+    border-radius: $radius-card;
     border: 1px solid $border;
-    border-radius: 16px;
-    padding: 20px;
-    transition: all $transition-base;
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-      opacity: 0;
-      transition: opacity $transition-base;
-    }
+    background: $bg-elevated;
+    box-shadow: $shadow-xs;
+    transition:
+      transform $transition-base,
+      border-color $transition-base,
+      box-shadow $transition-base;
 
     &:hover {
-      transform: translateY(-4px);
-      border-color: rgba($brand-start, 0.4);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba($brand-start, 0.1);
-
-      &::before {
-        opacity: 1;
-      }
-    }
-
-    // Platform-specific accent colors
-    &.platform-douyin:hover { border-color: rgba($platform-douyin, 0.5); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba($platform-douyin, 0.15); }
-    &.platform-kuaishou:hover { border-color: rgba($platform-kuaishou, 0.5); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba($platform-kuaishou, 0.15); }
-    &.platform-channels:hover { border-color: rgba($platform-channels, 0.5); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba($platform-channels, 0.15); }
-    &.platform-xiaohongshu:hover { border-color: rgba($platform-xiaohongshu, 0.5); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba($platform-xiaohongshu, 0.15); }
-    &.platform-bilibili:hover { border-color: rgba($platform-bilibili, 0.5); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba($platform-bilibili, 0.15); }
-
-    .card-body {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-
-      .user-avatar {
-        border: 2px solid $border;
-        flex-shrink: 0;
-      }
-
-      .user-info {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-
-        .user-name {
-          font-size: 16px;
-          font-weight: 600;
-          color: $text-primary;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .platform-row {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-
-          .platform-name {
-            font-size: 13px;
-            color: $text-muted;
-          }
-
-          .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 11px;
-            font-weight: 500;
-            padding: 2px 8px;
-            border-radius: 12px;
-
-            .status-dot {
-              width: 5px;
-              height: 5px;
-              border-radius: 50%;
-            }
-
-            &.normal {
-              background: rgba($success-color, 0.15);
-              color: $success-color;
-              .status-dot { background: $success-color; }
-            }
-
-            &.pending {
-              background: rgba($info-color, 0.15);
-              color: $info-color;
-              .status-dot { background: $info-color; animation: pulse 1.5s infinite; }
-            }
-
-            &.error {
-              background: rgba($danger-color, 0.15);
-              color: $danger-color;
-              .status-dot { background: $danger-color; }
-            }
-          }
-        }
-      }
-
-      .platform-logo {
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-
-        .platform-icon {
-          width: 40px;
-          height: 40px;
-          object-fit: contain;
-        }
-
-        .platform-letter {
-          font-size: 20px;
-          font-weight: 700;
-        }
-      }
-    }
-
-    .card-footer {
-      display: flex;
-      align-items: center;
-      padding-top: 12px;
-      border-top: 1px solid $border-light;
-
-      .card-actions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      .action-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 6px 12px;
-        border: none;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all $transition-base;
-        background: rgba(255, 255, 255, 0.05);
-        color: $text-secondary;
-        white-space: nowrap;
-        flex-shrink: 0;
-
-        .el-icon {
-          font-size: 14px;
-        }
-
-        &:hover:not(:disabled) {
-          transform: translateY(-1px);
-        }
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        &.check {
-          background: rgba($success-color, 0.1);
-          color: $success-color;
-          &:hover:not(:disabled) { background: rgba($success-color, 0.2); box-shadow: 0 2px 10px rgba($success-color, 0.2); }
-        }
-
-        &.sync {
-          background: rgba($info-color, 0.1);
-          color: $info-color;
-          &:hover:not(:disabled) { background: rgba($info-color, 0.2); box-shadow: 0 2px 10px rgba($info-color, 0.2); }
-        }
-
-        &.creator {
-          background: rgba($accent-cyan, 0.1);
-          color: $accent-cyan;
-          &:hover:not(:disabled) { background: rgba($accent-cyan, 0.2); box-shadow: 0 2px 10px rgba($accent-cyan, 0.2); }
-        }
-
-        &.delete {
-          background: rgba($danger-color, 0.1);
-          color: $danger-color;
-          &:hover:not(:disabled) { background: rgba($danger-color, 0.2); box-shadow: 0 2px 10px rgba($danger-color, 0.2); }
-        }
-      }
+      transform: translateY(-2px);
+      box-shadow: $shadow-sm;
+      border-color: $border-active;
     }
   }
 
-  // Empty state
-  .empty-state {
+  .account-card__main {
     display: flex;
-    justify-content: center;
     align-items: center;
-    min-height: 300px;
-    margin-bottom: 24px;
+    gap: $spacing-md;
+  }
 
-    .empty-content {
-      text-align: center;
-      padding: 48px;
+  .user-avatar {
+    border: 1px solid $border;
+    flex-shrink: 0;
+  }
 
-      .empty-icon {
-        font-size: 64px;
-        color: $text-muted;
-        margin-bottom: 16px;
+  .account-card__copy {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .account-name {
+    color: $text-primary;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .account-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  .platform-name {
+    color: $text-secondary;
+    font-size: 13px;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+
+    &.normal {
+      color: $success-color;
+      background: rgba($success-color, 0.12);
+    }
+
+    &.pending {
+      color: $info-color;
+      background: rgba($info-color, 0.12);
+    }
+
+    &.error {
+      color: $danger-color;
+      background: rgba($danger-color, 0.12);
+    }
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .platform-logo {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .platform-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+
+  .platform-letter {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .account-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    padding-top: $spacing-md;
+    border-top: 1px solid $border-light;
+  }
+
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px 0 10px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: $bg-elevated;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    color: $text-secondary;
+    font-size: 12px;
+    font-weight: 600;
+    transition:
+      border-color $transition-base,
+      background-color $transition-base,
+      color $transition-base,
+      box-shadow $transition-base,
+      transform $transition-base;
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .action-btn__icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba($text-primary, 0.06);
+      color: inherit;
+      flex-shrink: 0;
+      transition:
+        background-color $transition-base,
+        color $transition-base;
+    }
+
+    .action-btn__label {
+      line-height: 1;
+    }
+
+    &--success {
+      color: color.adjust($success-color, $lightness: -6%);
+      background: rgba($success-color, 0.08);
+      border-color: rgba($success-color, 0.16);
+
+      .action-btn__icon {
+        background: rgba($success-color, 0.14);
       }
 
-      h3 {
-        font-size: 20px;
-        font-weight: 600;
-        color: $text-primary;
-        margin: 0 0 8px;
+      &:hover {
+        background: rgba($success-color, 0.12);
+        border-color: rgba($success-color, 0.24);
+      }
+    }
+
+    &--info {
+      color: color.adjust($info-color, $lightness: -4%);
+      background: rgba($info-color, 0.08);
+      border-color: rgba($info-color, 0.16);
+
+      .action-btn__icon {
+        background: rgba($info-color, 0.14);
       }
 
-      p {
-        font-size: 14px;
-        color: $text-muted;
-        margin: 0 0 24px;
+      &:hover {
+        background: rgba($info-color, 0.12);
+        border-color: rgba($info-color, 0.24);
+      }
+    }
+
+    &--teal {
+      color: color.adjust($brand-start, $lightness: -4%);
+      background: rgba($brand-start, 0.08);
+      border-color: rgba($brand-start, 0.16);
+
+      .action-btn__icon {
+        background: rgba($brand-start, 0.14);
+      }
+
+      &:hover {
+        background: rgba($brand-start, 0.12);
+        border-color: rgba($brand-start, 0.24);
+      }
+    }
+
+    &--danger {
+      color: color.adjust($danger-color, $lightness: -2%);
+      background: rgba($danger-color, 0.08);
+      border-color: rgba($danger-color, 0.16);
+
+      .action-btn__icon {
+        background: rgba($danger-color, 0.14);
+      }
+
+      &:hover {
+        background: rgba($danger-color, 0.12);
+        border-color: rgba($danger-color, 0.24);
       }
     }
   }
 
-  
-  // QR code area
   .qrcode-container {
-    margin-top: 20px;
+    margin-top: $spacing-md;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 250px;
+  }
 
-    .qrcode-wrapper {
-      text-align: center;
+  .qrcode-wrapper {
+    text-align: center;
+  }
 
-      .qrcode-tip {
-        margin-bottom: 16px;
-        color: $text-secondary;
-      }
+  .qrcode-tip {
+    margin-bottom: $spacing-md;
+    color: $text-secondary;
+  }
 
-      .qrcode-image {
-        max-width: 200px;
-        max-height: 200px;
-        border: 1px solid $border;
-        background-color: #000;
-        border-radius: $radius-sm;
-      }
+  .qrcode-image {
+    max-width: 200px;
+    max-height: 200px;
+    border: 1px solid $border;
+    background-color: #000;
+    border-radius: $radius-sm;
+  }
+
+  .loading-wrapper,
+  .status-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+
+    .el-icon {
+      font-size: 48px;
     }
+  }
 
-    .loading-wrapper, .status-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
+  .success .el-icon {
+    color: $success-color;
+  }
 
-      .el-icon {
-        font-size: 48px;
-        &.is-loading { animation: rotate 1s linear infinite; }
-      }
-      span { font-size: 16px; }
-    }
-
-    .success .el-icon { color: $success-color; }
-    .error .el-icon { color: $danger-color; }
+  .error .el-icon {
+    color: $danger-color;
   }
 
   .dialog-footer {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
+    gap: $spacing-sm;
   }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
 </style>

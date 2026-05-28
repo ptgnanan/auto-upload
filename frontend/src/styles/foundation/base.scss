@@ -1,0 +1,26 @@
+body {
+  font-family: var(--font-family-sans);
+  font-size: var(--text-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  background:
+    radial-gradient(circle at top left, rgba(20, 147, 124, 0.08), transparent 28%),
+    linear-gradient(180deg, #fbfdfd 0%, #f5f8f7 100%);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(20, 147, 124, 0.16);
+  color: var(--color-text-primary);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.visually-muted {
+  color: var(--color-text-muted);
+}

@@ -1,10 +1,9 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { getRuntimeBackendBaseUrl } from './api-runtime'
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || getRuntimeBackendBaseUrl() || '',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   headers: {
     'Content-Type': 'application/json'
   }

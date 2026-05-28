@@ -1,0 +1,54 @@
+.workbench-shell {
+  display: grid;
+  grid-template-columns: 288px minmax(0, 1fr);
+  min-height: 100%;
+  gap: var(--space-5);
+}
+
+.workbench-sidebar,
+.workbench-main {
+  min-width: 0;
+}
+
+.workbench-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.workbench-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-xs);
+}
+
+.config-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.media-panel,
+.publish-confirm-surface {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+}
+
+@media (max-width: 1280px) {
+  .workbench-shell {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .workbench-shell {
+    grid-template-columns: 1fr;
+  }
+}

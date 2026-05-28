@@ -1,0 +1,43 @@
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
+}
+
+h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+h2 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+p {
+  color: var(--color-text-secondary);
+}
+
+.page-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+}
+
+.page-subtitle {
+  margin-top: var(--space-2);
+  font-size: var(--text-base);
+  line-height: var(--line-height-loose);
+  color: var(--color-text-secondary);
+}

@@ -1,0 +1,89 @@
+$font-family-sans: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+$font-family-mono: 'Consolas', 'SFMono-Regular', 'Liberation Mono', monospace;
+
+$neutral-0: #ffffff;
+$neutral-25: #fcfdfd;
+$neutral-50: #f6f9f8;
+$neutral-100: #edf2f1;
+$neutral-150: #e4ebea;
+$neutral-200: #d7e0de;
+$neutral-300: #bdcac7;
+$neutral-400: #8b9a97;
+$neutral-500: #667572;
+$neutral-600: #4f5d5a;
+$neutral-700: #394542;
+$neutral-800: #27312f;
+$neutral-900: #1b2221;
+$neutral-950: #111716;
+
+$teal-50: #eefbf8;
+$teal-100: #d4f4ec;
+$teal-200: #abe7d8;
+$teal-300: #73d1bb;
+$teal-400: #36b69b;
+$teal-500: #14937c;
+$teal-600: #0f7564;
+$teal-700: #0e5d51;
+$teal-800: #114a42;
+
+$blue-500: #2f80ed;
+$blue-100: #e8f2ff;
+$green-500: #1f9d68;
+$green-100: #e8f8f1;
+$amber-500: #d38a12;
+$amber-100: #fdf4df;
+$red-500: #d84c4c;
+$red-100: #fdecec;
+
+$space-0: 0;
+$space-1: 4px;
+$space-2: 8px;
+$space-3: 12px;
+$space-4: 16px;
+$space-5: 20px;
+$space-6: 24px;
+$space-7: 28px;
+$space-8: 32px;
+$space-10: 40px;
+$space-12: 48px;
+
+$radius-xs: 6px;
+$radius-sm: 10px;
+$radius-md: 14px;
+$radius-lg: 18px;
+$radius-xl: 24px;
+$radius-round: 999px;
+
+$shadow-xs: 0 1px 2px rgba(17, 23, 22, 0.04);
+$shadow-sm: 0 6px 18px rgba(17, 23, 22, 0.06);
+$shadow-md: 0 14px 36px rgba(17, 23, 22, 0.08);
+$shadow-lg: 0 22px 60px rgba(17, 23, 22, 0.12);
+
+$text-xs: 12px;
+$text-sm: 13px;
+$text-base: 14px;
+$text-md: 15px;
+$text-lg: 16px;
+$text-xl: 18px;
+$text-2xl: 24px;
+$text-3xl: 30px;
+
+$line-height-tight: 1.2;
+$line-height-base: 1.5;
+$line-height-loose: 1.7;
+
+$duration-fast: 160ms;
+$duration-base: 220ms;
+$duration-slow: 320ms;
+$ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+$z-base: 1;
+$z-sticky: 20;
+$z-sidebar: 40;
+$z-header: 50;
+$z-overlay: 1000;
+$z-dialog: 1100;
+
+$control-sm: 32px;
+$control-md: 38px;
+$control-lg: 44px;

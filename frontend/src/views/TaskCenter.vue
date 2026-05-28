@@ -1,42 +1,42 @@
 <template>
-  <div class="task-center-page">
-    <div class="page-header">
-      <h1>任务中心</h1>
-      <p class="page-subtitle">查看和管理发布任务</p>
-    </div>
-
-    <!-- Queue status bar -->
-    <div class="queue-status-bar">
-      <div class="queue-status-item">
-        <span class="queue-label">活跃 Worker:</span>
-        <span class="queue-value active">{{ queueStatus.active || 0 }}</span>
+  <section class="page-shell task-center-page">
+    <header class="page-header">
+      <div class="page-header__main">
+        <h1 class="page-title">任务中心</h1>
+        <p class="page-subtitle">查看和管理发布任务</p>
       </div>
-      <div class="queue-divider"></div>
-      <div class="queue-status-item">
-        <span class="queue-label">等待中:</span>
-        <span class="queue-value waiting">{{ queueStatus.waiting || 0 }}</span>
-      </div>
-    </div>
+    </header>
 
-    <div class="task-container">
-      <div class="task-toolbar">
-        <div class="toolbar-left">
-          <div class="status-filters">
-            <div v-for="f in filterOptions" :key="f.value"
-              :class="['filter-chip', { active: activeFilter === f.value }]"
-              @click="activeFilter = f.value">
-              {{ f.label }}
-            </div>
+    <div class="page-content">
+      <section class="section-card queue-overview">
+        <div class="section-card__body queue-overview__body">
+          <div class="queue-item">
+            <span class="queue-item__label">活跃 Worker</span>
+            <strong class="queue-item__value queue-item__value--success">{{ queueStatus.active || 0 }}</strong>
+          </div>
+          <div class="queue-item">
+            <span class="queue-item__label">等待中</span>
+            <strong class="queue-item__value queue-item__value--info">{{ queueStatus.waiting || 0 }}</strong>
           </div>
         </div>
-        <div class="toolbar-right">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索标题或账号"
-            prefix-icon="Search"
-            clearable
-            style="width: 240px"
-          />
+      </section>
+
+      <div class="page-toolbar">
+        <div class="page-toolbar__group page-toolbar__group--grow">
+          <div class="status-filters">
+            <button
+              v-for="f in filterOptions"
+              :key="f.value"
+              :class="['filter-chip', { active: activeFilter === f.value }]"
+              @click="activeFilter = f.value"
+            >
+              {{ f.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="page-toolbar__group">
+          <el-input v-model="searchKeyword" placeholder="搜索标题或账号" clearable class="task-search" />
           <el-button @click="handleRefresh" :loading="loading">
             <el-icon v-if="!loading"><Refresh /></el-icon>
             刷新
@@ -44,80 +44,90 @@
         </div>
       </div>
 
-      <div v-if="filteredTasks.length > 0" class="task-list">
-        <el-table :data="paginatedTasks" style="width: 100%">
-          <el-table-column label="任务ID" width="100">
-            <template #default="scope">
-              <span class="task-id">{{ shortId(scope.row.id) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="platform" label="平台" width="110">
-            <template #default="scope">
-              <span :class="['platform-tag', getPlatformClass(scope.row.platform)]">
-                {{ scope.row.platform }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="account_name" label="账号" width="140">
-            <template #default="scope">
-              <span class="account-name">{{ scope.row.account_name || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="title" label="标题" min-width="200">
-            <template #default="scope">
-              <span class="task-title" :title="scope.row.title">{{ scope.row.title || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="status" label="状态" width="110">
-            <template #default="scope">
-              <span :class="['status-tag', getStatusClass(scope.row.status)]">
-                {{ scope.row.status }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="创建时间" width="170">
-            <template #default="scope">
-              <span class="time-text">{{ formatTime(scope.row.created_at) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right">
-            <template #default="scope">
-              <div class="action-cell">
-                <button v-if="scope.row.status === '排队中' || scope.row.status === '发布中'"
-                  class="action-btn danger" @click="handleCancel(scope.row)">取消</button>
-                <button v-else-if="scope.row.status === '失败'"
-                  class="action-btn primary" @click="handleRetry(scope.row)">重试</button>
-                <button v-else-if="scope.row.status === '成功'"
-                  class="action-btn disabled" disabled>查看</button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
+      <section class="section-card">
+        <div class="section-card__body">
+          <div v-if="filteredTasks.length > 0" class="task-table-wrap">
+            <el-table :data="paginatedTasks" style="width: 100%">
+              <el-table-column label="任务ID" width="120">
+                <template #default="scope">
+                  <span class="task-id">{{ shortId(scope.row.id) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="platform" label="平台" width="110">
+                <template #default="scope">
+                  <span :class="['platform-tag', getPlatformClass(scope.row.platform)]">{{ scope.row.platform }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="account_name" label="账号" width="140">
+                <template #default="scope">
+                  <span class="primary-cell">{{ scope.row.account_name || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="title" label="标题" min-width="220">
+                <template #default="scope">
+                  <span class="task-title" :title="scope.row.title">{{ scope.row.title || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="status" label="状态" width="110">
+                <template #default="scope">
+                  <span :class="['status-tag', getStatusClass(scope.row.status)]">{{ scope.row.status }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="创建时间" width="170">
+                <template #default="scope">
+                  <span class="muted-cell">{{ formatTime(scope.row.created_at) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="120" fixed="right">
+                <template #default="scope">
+                  <div class="action-cell">
+                    <button
+                      v-if="scope.row.status === '排队中' || scope.row.status === '发布中'"
+                      class="action-btn action-btn--danger"
+                      @click="handleCancel(scope.row)"
+                    >
+                      取消
+                    </button>
+                    <button
+                      v-else-if="scope.row.status === '失败'"
+                      class="action-btn action-btn--primary"
+                      @click="handleRetry(scope.row)"
+                    >
+                      重试
+                    </button>
+                    <button v-else class="action-btn action-btn--disabled" disabled>查看</button>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
 
-        <div class="pagination-wrapper" v-if="totalPages > 1">
-          <el-pagination
-            v-model:current-page="currentPage"
-            :page-size="pageSize"
-            :total="filteredTasks.length"
-            layout="prev, pager, next"
-            background
-            small
-          />
-        </div>
-      </div>
+            <div class="table-footer" v-if="totalPages > 1">
+              <el-pagination
+                v-model:current-page="currentPage"
+                :page-size="pageSize"
+                :total="filteredTasks.length"
+                layout="prev, pager, next"
+                background
+                small
+              />
+            </div>
+          </div>
 
-      <div v-else class="empty-data">
-        <div class="empty-state">
-          <el-icon class="empty-icon"><List /></el-icon>
-          <p class="empty-text">{{ searchKeyword || activeFilter !== 'all' ? '未找到匹配的任务' : '暂无任务数据' }}</p>
+          <div v-else class="empty-state">
+            <div class="empty-state__inner">
+              <el-icon class="empty-state__icon"><List /></el-icon>
+              <strong class="empty-state__title">{{ searchKeyword || activeFilter !== 'all' ? '未找到匹配的任务' : '暂无任务数据' }}</strong>
+              <p class="empty-state__text">任务创建后会在这里展示实时状态和操作入口。</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Refresh, List } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { taskApi } from '@/api/v2'
@@ -140,48 +150,41 @@ const filterOptions = [
   { label: '失败', value: '失败' },
 ]
 
-// Fetch tasks
 const fetchTasks = async () => {
   loading.value = true
   try {
     const res = await taskApi.getTasks()
     if (res.code === 200) tasks.value = res.data || []
-  } catch (e) {
-    console.error('获取任务列表失败:', e)
+  } catch (error) {
+    console.error('获取任务列表失败:', error)
   } finally {
     loading.value = false
   }
 }
 
-// Fetch queue status
 const fetchQueueStatus = async () => {
   try {
     const res = await taskApi.getQueueStatus()
     if (res.code === 200) queueStatus.value = res.data || { active: 0, waiting: 0 }
-  } catch (e) {
-    console.error('获取队列状态失败:', e)
+  } catch (error) {
+    console.error('获取队列状态失败:', error)
   }
 }
 
-// SSE connection for real-time updates
 let eventSource = null
 const connectSSE = () => {
   eventSource = new EventSource(resolveApiUrl('/api/v2/tasks/stream'))
-  eventSource.onmessage = (e) => {
+  eventSource.onmessage = event => {
     try {
-      const data = JSON.parse(e.data)
-      const idx = tasks.value.findIndex(t => t.id === data.id)
-      if (idx !== -1) {
-        tasks.value[idx] = { ...tasks.value[idx], ...data }
+      const data = JSON.parse(event.data)
+      const index = tasks.value.findIndex(task => task.id === data.id)
+      if (index !== -1) {
+        tasks.value[index] = { ...tasks.value[index], ...data }
       } else {
-        // New task, prepend to list
         tasks.value.unshift(data)
       }
-      // Refresh queue status on updates
       fetchQueueStatus()
-    } catch (err) {
-      // Ignore parse errors
-    }
+    } catch {}
   }
   eventSource.onerror = () => {
     eventSource?.close()
@@ -189,50 +192,47 @@ const connectSSE = () => {
   }
 }
 
-// Filtered tasks
 const filteredTasks = computed(() => {
   let result = tasks.value
   if (activeFilter.value !== 'all') {
-    result = result.filter(t => t.status === activeFilter.value)
+    result = result.filter(task => task.status === activeFilter.value)
   }
   if (searchKeyword.value) {
-    const kw = searchKeyword.value.toLowerCase()
-    result = result.filter(t =>
-      (t.title || '').toLowerCase().includes(kw) ||
-      (t.account_name || '').toLowerCase().includes(kw)
+    const keyword = searchKeyword.value.toLowerCase()
+    result = result.filter(task =>
+      (task.title || '').toLowerCase().includes(keyword) ||
+      (task.account_name || '').toLowerCase().includes(keyword),
     )
   }
   return result
 })
 
-// Pagination
 const totalPages = computed(() => Math.ceil(filteredTasks.value.length / pageSize))
 const paginatedTasks = computed(() => {
   const start = (currentPage.value - 1) * pageSize
   return filteredTasks.value.slice(start, start + pageSize)
 })
 
-// Actions
-const handleCancel = async (task) => {
+const handleCancel = async task => {
   try {
     await taskApi.cancelTask(task.id)
     ElMessage.success('任务已取消')
     fetchTasks()
     fetchQueueStatus()
-  } catch (e) {
-    console.error('取消任务失败:', e)
+  } catch (error) {
+    console.error('取消任务失败:', error)
     ElMessage.error('取消任务失败')
   }
 }
 
-const handleRetry = async (task) => {
+const handleRetry = async task => {
   try {
     await taskApi.retryTask(task.id)
     ElMessage.success('任务已重新提交')
     fetchTasks()
     fetchQueueStatus()
-  } catch (e) {
-    console.error('重试任务失败:', e)
+  } catch (error) {
+    console.error('重试任务失败:', error)
     ElMessage.error('重试任务失败')
   }
 }
@@ -242,32 +242,29 @@ const handleRefresh = () => {
   fetchQueueStatus()
 }
 
-// Helpers
-const shortId = (id) => {
+const shortId = id => {
   if (!id) return '-'
   const str = String(id)
   return str.length > 8 ? str.slice(0, 8) : str
 }
 
-const getPlatformClass = (platform) => {
-  return platformCssMap[platform] || ''
-}
+const getPlatformClass = platform => platformCssMap[platform] || ''
 
-const getStatusClass = (status) => {
+const getStatusClass = status => {
   const classMap = {
-    '排队中': 'pending',
-    '发布中': 'running',
-    '成功': 'success',
-    '失败': 'failed',
+    排队中: 'pending',
+    发布中: 'running',
+    成功: 'success',
+    失败: 'failed',
   }
   return classMap[status] || ''
 }
 
-const formatTime = (time) => {
+const formatTime = time => {
   if (!time) return '-'
   try {
     const d = new Date(time)
-    const pad = (n) => String(n).padStart(2, '0')
+    const pad = n => String(n).padStart(2, '0')
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
   } catch {
     return time
@@ -291,352 +288,196 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 @use '@/styles/variables.scss' as *;
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
 .task-center-page {
-  .page-header {
-    margin-bottom: 24px;
-
-    h1 {
-      font-size: 26px;
-      font-weight: 700;
-      color: $text-primary;
-      margin: 0;
-      letter-spacing: -0.5px;
-    }
-
-    .page-subtitle {
-      margin: 6px 0 0;
-      font-size: 14px;
-      color: $text-muted;
-      font-weight: 400;
-    }
+  .queue-overview {
+    background: linear-gradient(135deg, rgba($brand-start, 0.08), rgba($info-color, 0.04));
+    border-color: $border-active;
   }
 
-  // Queue status bar
-  .queue-status-bar {
+  .queue-overview__body {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px 20px;
-    margin-bottom: 16px;
-    background: $gradient-brand-subtle;
-    border: 1px solid $border-active;
-    border-radius: $radius-card;
+    gap: $spacing-xl;
+  }
 
-    .queue-status-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+  .queue-item {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
 
-      .queue-label {
-        font-size: 13px;
-        color: $text-secondary;
-      }
+  .queue-item__label {
+    font-size: 13px;
+    color: $text-secondary;
+  }
 
-      .queue-value {
-        font-size: 14px;
-        font-weight: 600;
+  .queue-item__value {
+    font-size: 28px;
+    line-height: 1;
+    color: $text-primary;
 
-        &.active {
-          color: $success-color;
-        }
-
-        &.waiting {
-          color: $info-color;
-        }
-      }
+    &--success {
+      color: $success-color;
     }
 
-    .queue-divider {
-      width: 1px;
-      height: 16px;
-      background: $border;
+    &--info {
+      color: $info-color;
     }
   }
 
-  .task-container {
-    background-color: $bg-elevated;
+  .status-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
+  .filter-chip {
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
     border: 1px solid $border;
-    border-radius: $radius-card;
-    padding: 4px 24px 24px;
+    background: $bg-elevated;
+    color: $text-secondary;
+    font-size: 13px;
+    font-weight: 600;
 
-    .task-toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      gap: 16px;
+    &.active {
+      border-color: $border-active;
+      background: rgba($brand-start, 0.08);
+      color: $brand-start;
+    }
+  }
 
-      .toolbar-left {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        flex: 1;
-      }
+  .task-search {
+    width: 240px;
+  }
 
-      .toolbar-right {
-        display: flex;
-        gap: 10px;
-        flex-shrink: 0;
-      }
+  .task-table-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  .task-id {
+    display: inline-flex;
+    min-height: 24px;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: $radius-sm;
+    background: $bg-surface;
+    color: $text-secondary;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+
+  .primary-cell,
+  .task-title {
+    color: $text-primary;
+    font-weight: 500;
+  }
+
+  .task-title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+
+  .muted-cell {
+    color: $text-secondary;
+  }
+
+  .platform-tag,
+  .status-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .platform-tag.douyin {
+    color: $platform-douyin;
+    background: $platform-douyin-bg;
+  }
+
+  .platform-tag.kuaishou {
+    color: $platform-kuaishou;
+    background: $platform-kuaishou-bg;
+  }
+
+  .platform-tag.channels {
+    color: $platform-channels;
+    background: $platform-channels-bg;
+  }
+
+  .platform-tag.xiaohongshu {
+    color: $platform-xiaohongshu;
+    background: $platform-xiaohongshu-bg;
+  }
+
+  .platform-tag.bilibili {
+    color: $platform-bilibili;
+    background: $platform-bilibili-bg;
+  }
+
+  .status-tag.pending {
+    color: $info-color;
+    background: rgba($info-color, 0.12);
+  }
+
+  .status-tag.running {
+    color: $brand-start;
+    background: rgba($brand-start, 0.12);
+  }
+
+  .status-tag.success {
+    color: $success-color;
+    background: rgba($success-color, 0.12);
+  }
+
+  .status-tag.failed {
+    color: $danger-color;
+    background: rgba($danger-color, 0.12);
+  }
+
+  .action-cell {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .action-btn {
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: $radius-sm;
+    font-size: 12px;
+    font-weight: 600;
+
+    &--primary {
+      background: rgba($info-color, 0.1);
+      color: $info-color;
     }
 
-    // Status filter chips
-    .status-filters {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-
-      .filter-chip {
-        padding: 6px 16px;
-        border-radius: $radius-base;
-        border: 1px solid $border;
-        background: transparent;
-        color: $text-secondary;
-        font-size: 13px;
-        cursor: pointer;
-        transition: $transition-base;
-        white-space: nowrap;
-        user-select: none;
-
-        &:hover {
-          border-color: $border-active;
-          color: $text-primary;
-        }
-
-        &.active {
-          background: $gradient-brand-subtle;
-          border-color: $border-active;
-          color: $text-primary;
-          font-weight: 500;
-        }
-      }
+    &--danger {
+      background: rgba($danger-color, 0.1);
+      color: $danger-color;
     }
 
-    // Task table
-    .task-list {
-      :deep(.el-table) {
-        --el-table-bg-color: transparent;
-        --el-table-tr-bg-color: transparent;
-        --el-table-header-bg-color: transparent;
-        --el-table-row-hover-bg-color: rgba(255, 255, 255, 0.03);
-        --el-table-border-color: #{$border};
-        --el-table-text-color: #{$text-primary};
-        --el-table-header-text-color: #{$text-secondary};
-
-        th.el-table__cell {
-          font-weight: 500;
-          font-size: 13px;
-          border-bottom-color: $border;
-        }
-
-        td.el-table__cell {
-          border-bottom-color: $border;
-        }
-      }
-
-      .task-id {
-        font-family: 'SF Mono', 'Fira Code', monospace;
-        font-size: 12px;
-        color: $text-muted;
-        background: rgba(255, 255, 255, 0.04);
-        padding: 2px 6px;
-        border-radius: 4px;
-      }
-
-      .account-name {
-        font-weight: 500;
-        color: $text-primary;
-      }
-
-      .task-title {
-        color: $text-primary;
-        display: -webkit-box;
-        -webkit-line-clamp: 1;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .time-text {
-        font-size: 13px;
-        color: $text-secondary;
-      }
-
-      // Platform tags
-      .platform-tag {
-        display: inline-flex;
-        align-items: center;
-        padding: 3px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-        line-height: 1.5;
-        white-space: nowrap;
-
-        &.douyin {
-          background: $platform-douyin-bg;
-          color: $platform-douyin;
-        }
-
-        &.kuaishou {
-          background: $platform-kuaishou-bg;
-          color: $platform-kuaishou;
-        }
-
-        &.channels {
-          background: $platform-channels-bg;
-          color: $platform-channels;
-        }
-
-        &.xiaohongshu {
-          background: $platform-xiaohongshu-bg;
-          color: $platform-xiaohongshu;
-        }
-
-        &.bilibili {
-          background: $platform-bilibili-bg;
-          color: $platform-bilibili;
-        }
-      }
-
-      // Status tags
-      .status-tag {
-        display: inline-flex;
-        align-items: center;
-        padding: 3px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-        line-height: 1.5;
-        white-space: nowrap;
-
-        &.pending {
-          background: rgba(59, 130, 246, 0.15);
-          color: $info-color;
-        }
-
-        &.running {
-          background: rgba(139, 92, 246, 0.15);
-          color: $brand-start;
-          animation: pulse 2s ease-in-out infinite;
-        }
-
-        &.success {
-          background: rgba(34, 197, 94, 0.15);
-          color: $success-color;
-        }
-
-        &.failed {
-          background: rgba(239, 68, 68, 0.15);
-          color: $danger-color;
-        }
-      }
-
-      // Action buttons
-      .action-cell {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-
-        .action-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 10px;
-          border: none;
-          border-radius: $radius-sm;
-          background: transparent;
-          color: $text-secondary;
-          font-size: 13px;
-          cursor: pointer;
-          transition: $transition-base;
-
-          &:hover {
-            color: $text-primary;
-            background: rgba(255, 255, 255, 0.06);
-          }
-
-          &.primary:hover {
-            color: $brand-end;
-            background: rgba(59, 130, 246, 0.1);
-          }
-
-          &.danger:hover {
-            color: $danger-color;
-            background: rgba(239, 68, 68, 0.1);
-          }
-
-          &.disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-
-            &:hover {
-              color: $text-secondary;
-              background: transparent;
-            }
-          }
-        }
-      }
+    &--disabled {
+      background: $bg-surface;
+      color: $text-muted;
+      cursor: not-allowed;
     }
+  }
 
-    // Pagination
-    .pagination-wrapper {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-
-      :deep(.el-pagination) {
-        --el-pagination-bg-color: transparent;
-        --el-pagination-text-color: #{$text-secondary};
-        --el-pagination-button-bg-color: transparent;
-        --el-pagination-hover-color: #{$text-primary};
-
-        .btn-prev, .btn-next {
-          background: transparent;
-          border: 1px solid $border;
-          border-radius: $radius-sm;
-        }
-
-        .el-pager li {
-          background: transparent;
-          border: 1px solid $border;
-          border-radius: $radius-sm;
-
-          &.is-active {
-            background: $gradient-brand-subtle;
-            border-color: $border-active;
-            color: $text-primary;
-          }
-        }
-      }
-    }
-
-    // Empty state
-    .empty-data {
-      padding: 60px 0;
-
-      .empty-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-
-        .empty-icon {
-          font-size: 48px;
-          color: $text-muted;
-        }
-
-        .empty-text {
-          font-size: 14px;
-          color: $text-secondary;
-          margin: 0;
-        }
-      }
+  @media (max-width: 1024px) {
+    .queue-overview__body {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $spacing-md;
     }
   }
 }

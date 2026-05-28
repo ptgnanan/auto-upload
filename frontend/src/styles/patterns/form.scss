@@ -1,0 +1,23 @@
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field-group__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.field-group__hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-loose);
+}

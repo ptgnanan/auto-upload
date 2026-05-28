@@ -1,0 +1,43 @@
+:root {
+  --page-padding-x: var(--space-7);
+  --page-padding-y: var(--space-7);
+  --page-gap: var(--space-6);
+  --section-gap: var(--space-5);
+
+  --card-bg: var(--color-surface);
+  --card-bg-soft: var(--color-surface-soft);
+  --card-border: var(--color-border);
+  --card-shadow: var(--shadow-sm);
+  --card-radius: var(--radius-md);
+  --card-padding: var(--space-6);
+
+  --toolbar-bg: var(--color-surface);
+  --toolbar-border: var(--color-border);
+  --toolbar-padding-y: var(--space-4);
+  --toolbar-padding-x: var(--space-5);
+
+  --button-height: var(--control-md);
+  --button-padding-x: var(--space-4);
+  --button-radius: var(--radius-sm);
+  --button-font-weight: 600;
+
+  --input-height: var(--control-md);
+  --input-radius: var(--radius-sm);
+  --input-border: var(--color-border);
+  --input-bg: var(--color-surface);
+  --input-placeholder: var(--color-text-muted);
+
+  --table-header-bg: var(--color-page-bg-muted);
+  --table-row-hover: var(--color-hover-fill);
+  --table-row-selected: var(--color-selected-fill);
+  --table-border: var(--color-border-soft);
+
+  --tag-radius: var(--radius-round);
+  --tag-padding-x: var(--space-3);
+  --tag-height: 26px;
+
+  --dialog-radius: var(--radius-lg);
+  --dialog-width-narrow: 520px;
+  --dialog-width-medium: 680px;
+  --dialog-width-wide: 860px;
+}
